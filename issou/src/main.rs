@@ -6,35 +6,42 @@
 use core::panic::PanicInfo;
 use x86_64::instructions::port::Port;
 
-static  _A: &'static str = "Hello, World kojqsdioqjsdioqhjsujdchcviushiuxcnQIUDHSSDUIHNBQsiujdhb quiSH DUICQHBIUDChn iqjhdiCJQHNDJKQSHCDKJQSHDKJC H";
-
 #[no_mangle]
 pub extern "C" fn _start() {
-    init();
-    let mut port = Port::new(0xa2);
-    unsafe {
-        port.write(0xA2_u16);
-    }
-    main(_A);
-    //panic!();
+    syscall(0, 0, 0);
+    main();
 }
 
 fn init() {
-    unsafe { asm!("mov rax, 2", "int 80h",) }
+    unsafe { asm!("push rax", "mov rax, 2", "int 80h", "pop rax") }
 }
 
 #[panic_handler]
 pub fn panic(_: &PanicInfo) -> ! {
-    //unsafe { asm!("mov rax, 2", "int 80h",) }
+    unsafe { asm!("push rax", "mov rax, 1", "int 80h", "pop rax") }
+    unsafe { asm!("push 0", "ret") }
     loop {}
 }
 
 #[inline(never)]
-fn main(a: &'static str) {
-    let mut port = Port::new(0xa2);
-    for e in a.as_bytes() {
-        unsafe {
-            port.write(*e);
-        }
+fn main() {
+    let fork = syscall(5, 0, 0);
+    if fork == 0 {
+        syscall(6, 0, 0);
     }
+    loop {}
+}
+
+extern "C" fn syscall(nb: u64, arg0 : u64, arg1 : u64) -> usize{
+    let res;
+    unsafe {
+        asm!(
+            "mov rax, {}", 
+            "mov rdi, {}",
+            "mov rsi, {}",
+            "int 80h",
+            "mov {}, rax", 
+            in(reg) nb, in(reg) arg0, in(reg) arg1, out(reg) res)
+    };
+    res
 }

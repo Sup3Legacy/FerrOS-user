@@ -25,6 +25,10 @@ pub fn panic(_: &PanicInfo) -> ! {
 
 #[inline(never)]
 fn main() {
+    syscall(0, 0, 0);
+    syscall(0, 0, 0);
+    syscall(1, 0, 0);
+    syscall(2, 0, 0);
     let fork = syscall(5, 0, 0);
     // Debugs the pid of child
     syscall(20, fork as u64, 0);

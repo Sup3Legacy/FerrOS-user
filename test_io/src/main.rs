@@ -9,24 +9,23 @@ use x86_64::VirtAddr;
 
 #[no_mangle]
 pub extern "C" fn _start() {
+    syscall(0, 0, 0);
     main();
 }
 
 #[panic_handler]
 pub fn panic(_: &PanicInfo) -> ! {
-    unsafe { asm!("push rax", "mov rax, 1", "int 80h", "pop rax") }
+    unsafe { asm!("push rax", "mov rax, 9", "mov rdi, 1", "int 80h", "pop rax") }
     unsafe { asm!("push 0", "ret") }
     loop {}
 }
 
 #[inline(never)]
 fn main() {
+    syscall(0, 0, 0);
     print("hello world");
-    let fork = syscall(5, 0, 0);
-    if fork == 0 {
-        syscall(6, 0, 0);
-    }
-    loop {}
+    syscall(2, 0, 0);
+    panic!("failure");
 }
 
 fn print(a: &str) {
@@ -39,7 +38,22 @@ fn print(a: &str) {
             break
         }
     }
-    syscall(1, VirtAddr::from_ptr(t.as_ptr()).as_u64(), index as u64);
+    syscall_write(1, VirtAddr::from_ptr(t.as_ptr()).as_u64(), index as u64);
+}
+
+extern "C" fn syscall_write(arg0 : u64, arg1 : u64, arg2 : u64) -> usize{
+    let res;
+    unsafe {
+        asm!(
+            "mov rax, 1",
+            "mov rdi, {}", 
+            "mov rsi, {}",
+            "mov rdx, {}",
+            "int 80h",
+            "mov {}, rax", 
+            in(reg) arg0, in(reg) arg1, in(reg) arg2, out(reg) res)
+    };
+    res
 }
 
 extern "C" fn syscall(nb: u64, arg0 : u64, arg1 : u64) -> usize{

@@ -5,6 +5,11 @@
 
 use core::panic::PanicInfo;
 use x86_64::VirtAddr;
+use ferr_os_librust;
+
+extern crate alloc;
+
+use alloc::string::String;
 
 
 #[no_mangle]
@@ -13,22 +18,15 @@ pub extern "C" fn _start() {
     main();
 }
 
-#[panic_handler]
-pub fn panic(_: &PanicInfo) -> ! {
-    unsafe { asm!("push rax", "mov rax, 9", "mov rdi, 1", "int 80h", "pop rax") }
-    unsafe { asm!("push 0", "ret") }
-    loop {}
-}
-
 #[inline(never)]
 fn main() {
     syscall(0, 0, 0, 0);
-    print("hello world");
+    print(String::from("hello world"));
     syscall(2, 0, 0, 0);
     panic!("failure");
 }
 
-fn print(a: &str) {
+fn print(a: String) {
     let mut t : [u8; 128] = [0; 128];
     //syscall(20, 42, 0);
     let mut index = 0_usize;

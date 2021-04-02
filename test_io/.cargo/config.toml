@@ -5,3 +5,5 @@ build-std-features = ["compiler-builtins-mem"]
 
 [build]
 target = "x86_64-ferros.json"
+rustflags=["-C",  "relocation-model=ropi-rwpi"]
+

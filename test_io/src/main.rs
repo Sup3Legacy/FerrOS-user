@@ -15,6 +15,7 @@
 use core::panic::PanicInfo;
 use x86_64::VirtAddr;
 mod allocator;
+mod serial;
 
 extern crate alloc;
 
@@ -25,24 +26,28 @@ use alloc::vec::Vec;
 #[no_mangle]
 pub extern "C" fn _start() {
     syscall(20, 51, 0, 0);
+    println!("Whelp!");
     main();
 }
 
 #[inline(never)]
 fn main() {
+    
     allocator::init();
     
+    
     let mut a = String::new();
+    print!("Lol");
     syscall(20, 67, 0, 0);
     a.push('a');
     syscall(20, 68, 0, 0);
   
-    print(a);
+    //print(a);
     syscall(2, 0, 0, 0);
     loop {}
 }
 
-fn print(a: String) {
+fn print(a: &str) {
     syscall(20, 12, 0, 0);
     let mut t: [u8; 128] = [0; 128];
     //syscall(20, 42, 0);

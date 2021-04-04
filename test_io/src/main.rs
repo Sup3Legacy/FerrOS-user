@@ -2,50 +2,67 @@
 #![feature(start)]
 #![feature(asm)]
 #![no_main]
+#![cfg_attr(test, no_main)]
+#![feature(alloc_error_handler)]
+#![feature(custom_test_frameworks)]
+#![feature(core_intrinsics)]
+#![feature(gen_future)]
+#![feature(const_mut_refs)]
+#![feature(naked_functions)]
+#![feature(abi_x86_interrupt)]
+#![feature(intra_doc_pointers)]
 
 use core::panic::PanicInfo;
 use x86_64::VirtAddr;
-use ferr_os_librust;
+mod allocator;
 
 extern crate alloc;
 
 use alloc::string::String;
+use alloc::vec::Vec;
 
 
 #[no_mangle]
 pub extern "C" fn _start() {
-    syscall(0, 0, 0, 0);
+    syscall(20, 51, 0, 0);
     main();
 }
 
 #[inline(never)]
 fn main() {
-    syscall(0, 0, 0, 0);
-    print(String::from("hello world"));
+    allocator::init();
+    
+    let mut a = String::new();
+    syscall(20, 67, 0, 0);
+    a.push('a');
+    syscall(20, 68, 0, 0);
+  
+    print(a);
     syscall(2, 0, 0, 0);
-    panic!("failure");
+    loop {}
 }
 
 fn print(a: String) {
-    let mut t : [u8; 128] = [0; 128];
+    syscall(20, 12, 0, 0);
+    let mut t: [u8; 128] = [0; 128];
     //syscall(20, 42, 0);
     let mut index = 0_usize;
-    
+
     for c in a.bytes() {
         //syscall(20, index as u64, c as u64, 0);
         t[index] = c;
         index += 1;
         if index == 128 {
             t[index - 1] = 0; // We put a guard
-            break
+            break;
         }
     }
     let data_addr = VirtAddr::from_ptr(&t as *const u8);
-    syscall(1, 2, data_addr.as_u64(), index as u64);
+    syscall(1, 1, data_addr.as_u64(), index as u64);
 }
 
 #[inline(never)]
-extern "C" fn syscall(nb: u64, arg0 : u64, arg1 : u64, arg2 : u64) -> usize{
+pub extern "C" fn syscall(nb: u64, arg0: u64, arg1: u64, arg2: u64) -> usize {
     let res;
     unsafe {
         asm!(
@@ -58,4 +75,13 @@ extern "C" fn syscall(nb: u64, arg0 : u64, arg1 : u64, arg2 : u64) -> usize{
             in(reg) nb, in(reg) arg0, in(reg) arg1, in(reg) arg2, out(reg) res)
     };
     res
+}
+
+#[panic_handler]
+pub fn panic(_: &PanicInfo) -> ! {
+    unsafe {
+        syscall(20, 420, 0, 0);
+        asm!("push 1", "ret");
+    }
+    loop {}
 }

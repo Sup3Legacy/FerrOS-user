@@ -67,6 +67,7 @@ impl LinkedListAllocator {
 
     /// Find the first free region in the allocator that has a size at least equal to the requested one.
     fn find_region(&mut self, size: usize, align: usize) -> Option<(&'static mut ListNode, usize)> {
+        crate::syscall(20, 42, size as u64, align as u64);
         let mut current = &mut self.head;
         while let Some(ref mut region) = current.next {
             if let Ok(alloc_start) = Self::alloc_from_region(&region, size, align) {
@@ -114,8 +115,10 @@ impl LinkedListAllocator {
 
 unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        crate::syscall(20, 41, 1, 0);
         // perform layout adjustments
         let (size, align) = LinkedListAllocator::size_align(layout);
+        crate::syscall(20, size as u64, align as u64, 0);
         let mut allocator = self.lock();
 
         //     println!("{:#?}", allocator.head);
@@ -125,7 +128,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
             let excess_size = region.end_addr() - alloc_end;
             if excess_size > 0 {
                 allocator.add_free_region(alloc_end, excess_size);
-            }
+            }   
             alloc_start as *mut u8
         } else {
             ptr::null_mut()

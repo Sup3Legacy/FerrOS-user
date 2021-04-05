@@ -26,18 +26,21 @@ use alloc::vec::Vec;
 #[no_mangle]
 pub extern "C" fn _start() {
     syscall(20, 51, 0, 0);
-    println!("Whelp!");
+    //println!("Whelp!");
     main();
 }
 
 #[inline(never)]
 fn main() {
-    
+
+    syscall(20, 40, 0, 0);
+
     allocator::init();
-    
+    syscall(20, 41, 0, 0);
+
     
     let mut a = String::new();
-    print!("Lol");
+    //print!("Lol");
     syscall(20, 67, 0, 0);
     a.push('a');
     syscall(20, 68, 0, 0);

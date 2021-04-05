@@ -45,12 +45,12 @@ fn main() {
     a.push('a');
     syscall(20, 68, 0, 0);
   
-    //print(a);
+    print(a);
     syscall(2, 0, 0, 0);
     loop {}
 }
 
-fn print(a: &str) {
+fn print(a: String) {
     syscall(20, 12, 0, 0);
     let mut t: [u8; 128] = [0; 128];
     //syscall(20, 42, 0);
@@ -74,13 +74,8 @@ pub extern "C" fn syscall(nb: u64, arg0: u64, arg1: u64, arg2: u64) -> usize {
     let res;
     unsafe {
         asm!(
-            "mov rax, {}", 
-            "mov rdi, {}",
-            "mov rsi, {}",
-            "mov rdx, {}",
             "int 80h",
-            "mov {}, rax", 
-            in(reg) nb, in(reg) arg0, in(reg) arg1, in(reg) arg2, out(reg) res)
+            in("rax") nb, in("rdi") arg0, in("rsi") arg1, in("rdx") arg2, lateout("rax") res)
     };
     res
 }

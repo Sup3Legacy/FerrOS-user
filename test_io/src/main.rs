@@ -32,25 +32,21 @@ pub extern "C" fn _start() {
 
 #[inline(never)]
 fn main() {
-
-    syscall(20, 40, 0, 0);
-
-    allocator::init();
-    syscall(20, 41, 0, 0);
-
-    
+    let mut buffer = [0_u8; 256];
     let mut a = String::new();
-    //print!("Lol");
-    syscall(20, 67, 0, 0);
-    a.push('a');
-    syscall(20, 68, 0, 0);
-  
-    print(a);
-    syscall(2, 0, 0, 0);
-    loop {}
+    loop {
+        String::clear(&mut a);
+        let length = syscall(0, 0, buffer.as_ptr() as u64, 256); 
+        for i in 0..length {
+            a.push(buffer[i] as char);
+        }
+        print(&a);
+        halt();
+    }
 }
 
-fn print(a: String) {
+
+fn print(a: &String) {
     syscall(20, 12, 0, 0);
     let mut t: [u8; 128] = [0; 128];
     //syscall(20, 42, 0);
@@ -67,6 +63,10 @@ fn print(a: String) {
     }
     let data_addr = VirtAddr::from_ptr(&t as *const u8);
     syscall(1, 1, data_addr.as_u64(), index as u64);
+}
+
+pub fn halt() {
+    syscall(8, 0, 0, 0);
 }
 
 #[inline(never)]

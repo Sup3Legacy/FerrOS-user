@@ -67,7 +67,6 @@ impl LinkedListAllocator {
 
     /// Find the first free region in the allocator that has a size at least equal to the requested one.
     fn find_region(&mut self, size: usize, align: usize) -> Option<(&'static mut ListNode, usize)> {
-        crate::syscall(20, 42, size as u64, align as u64);
         let mut current = &mut self.head;
         while let Some(ref mut region) = current.next {
             if let Ok(alloc_start) = Self::alloc_from_region(&region, size, align) {

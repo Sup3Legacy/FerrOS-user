@@ -1,9 +1,9 @@
 use super::{align_up, Locked};
 
+use crate::syscall;
 use core::alloc::{GlobalAlloc, Layout};
 use core::mem;
 use core::ptr;
-use crate::syscall;
 
 /// Implements the structure of a linked list.
 ///
@@ -16,23 +16,44 @@ use crate::syscall;
 #[derive(Debug)]
 struct ListNode {
     size: usize,
-    previous: Option<&'static mut ListNode>,
     next: Option<&'static mut ListNode>,
 }
 
 impl ListNode {
     const fn new(size: usize) -> Self {
-        ListNode {
-            size,
-            previous: None,
-            next: None,
-        }
+        ListNode { size, next: None }
     }
     fn start_addr(&self) -> usize {
         self as *const Self as usize
     }
     fn end_addr(&self) -> usize {
         self.start_addr() + self.size
+    }
+    pub fn merge_partial(&mut self, nb: usize) {
+        let end_addr = self.end_addr();
+        if nb == 0 {
+            return;
+        } else {
+            if let Some(ref mut next_region) = self.next {
+                let next_size = next_region.size;
+                let next_next = next_region.next.take();
+                // If a merge is possible
+                if next_region.start_addr() == end_addr + 1 {
+                    // TODO This might be a bit wrong
+                    self.size += next_size + mem::size_of::<ListNode>();
+                    self.next = next_next;
+                    match self.next {
+                        Some(ref mut a) => a.merge_partial(nb - 1),
+                        _ => ()
+                    };
+                } else {
+                    next_region.next = next_next;
+                    next_region.merge_partial(nb - 1);
+                }
+            } else {
+                return;
+            }
+        }
     }
 }
 
@@ -52,7 +73,7 @@ impl LinkedListAllocator {
     }
     /// Adds a free region to the allocator. It works by placing a new `ListNode` at the front of the allocator with the given size.
     /// TODO : add the functionnality of list simplification by merging contiguous free regions.
-    unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
+    unsafe fn add_free_region_old(&mut self, addr: usize, size: usize) {
         assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
         assert!(size >= mem::size_of::<ListNode>());
         let mut node = ListNode::new(size);
@@ -60,6 +81,30 @@ impl LinkedListAllocator {
         let node_ptr = addr as *mut ListNode;
         node_ptr.write(node);
         self.head.next = Some(&mut *node_ptr)
+    }
+    unsafe fn add_free_region(&mut self, addr: usize, size: usize) {
+        assert_eq!(align_up(addr, mem::align_of::<ListNode>()), addr);
+        assert!(size >= mem::size_of::<ListNode>());
+        // Build new node
+        let mut node = ListNode::new(size);
+        node.next = self.head.next.take();
+        let node_ptr = addr as *mut ListNode;
+        node_ptr.write(node);
+        // Finds its place
+        let mut current = &mut self.head;
+        while let Some(ref mut next_region) = current.next {
+            // We insert it here
+            if next_region.start_addr() > addr {
+                (*node_ptr).next = current.next.take();
+                current.next = Some(&mut *node_ptr);
+                current.merge_partial(2);
+                return;
+            } else {
+                current = current.next.as_mut().unwrap();
+            }
+        }
+        // If we arrive here, we simply need to append the new_region
+        current.next = Some(&mut *node_ptr);
     }
     pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.add_free_region(heap_start, heap_size)
@@ -127,7 +172,7 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
             let excess_size = region.end_addr() - alloc_end;
             if excess_size > 0 {
                 allocator.add_free_region(alloc_end, excess_size);
-            }   
+            }
             alloc_start as *mut u8
         } else {
             ptr::null_mut()
@@ -140,4 +185,8 @@ unsafe impl GlobalAlloc for Locked<LinkedListAllocator> {
 
         self.lock().add_free_region(ptr as usize, size)
     }
+}
+
+impl Locked<LinkedListAllocator> {
+    fn add_page(&self) {}
 }

@@ -14,7 +14,6 @@
 
 use core::panic::PanicInfo;
 use x86_64::VirtAddr;
-mod allocator;
 mod serial;
 
 extern crate alloc;
@@ -24,21 +23,26 @@ use alloc::vec::Vec;
 
 
 #[no_mangle]
-pub extern "C" fn _start() {
-    syscall(20, 51, 0, 0);
+pub extern "C" fn _start(heap_address: u64, heap_size: u64) {
+    syscall(20, heap_address, heap_size, 0);
+    ferr_os_librust::allocator::init(heap_address, heap_size);
+    let mut a = String::new();
+    a.push('a');
+    //print(&a);
     //println!("Whelp!");
     main();
 }
 
 #[inline(never)]
 fn main() {
-    allocator::init();
+    let read_buffer = [0_u8; 256];
     let mut buffer = [0_u8; 256];
     
     loop {
-        let address = VirtAddr::from_ptr(buffer.as_ptr() as *mut u8);
+        let address = VirtAddr::from_ptr(read_buffer.as_ptr() as *mut u8);
         let length = syscall(0, 0, address.as_u64(), 256); 
-        print_buffer(&buffer[..], length as usize);
+        let write_length = ferr_os_librust::interfaces::keyboard::decode_buffer(&read_buffer[..], &mut buffer[..], length);
+        print_buffer(&buffer[..], write_length);
         halt();
     }
 }
@@ -87,13 +91,4 @@ pub extern "C" fn syscall(nb: u64, arg0: u64, arg1: u64, arg2: u64) -> usize {
             in("rax") nb, in("rdi") arg0, in("rsi") arg1, in("rdx") arg2, lateout("rax") res)
     };
     res
-}
-
-#[panic_handler]
-pub fn panic(_: &PanicInfo) -> ! {
-    unsafe {
-        syscall(20, 420, 0, 0);
-        asm!("push 1", "ret");
-    }
-    loop {}
 }

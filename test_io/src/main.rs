@@ -25,8 +25,8 @@ use alloc::vec::Vec;
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64) {
     syscall(20, 2, 0, 0);
-    set_screen_size(19, 79);
-    set_screen_position(1, 1);
+    set_screen_size(1, 40);
+    set_screen_position(0, 20);
     ferr_os_librust::allocator::init(heap_address, heap_size);
     let mut a = String::new();
     a.push('a');
@@ -46,15 +46,16 @@ fn main() {
         262, 277, 293, 311, 329, 349, 369, 391, 415, 440, 466, 494, 523,
     ];
     for (i, freq) in frequencies.iter().enumerate() {
-        push_sound(sound_fd as u64, *freq, 8, 24 + (i as u64) * 12);
+        //push_sound(sound_fd as u64, *freq, 8, 24 + (i as u64) * 12);
     }
 
-    push_sound(sound_fd as u64, 440, 40, 5 + 14 * 12);
-    push_sound(sound_fd as u64, 880, 20, 5 + 14 * 12);
+    //push_sound(sound_fd as u64, 440, 40, 5 + 14 * 12);
+    //push_sound(sound_fd as u64, 880, 20, 5 + 14 * 12);
 
     loop {
-        print(&read_to_string(clock_fd, 256));
-        print(&String::from("\n"));
+        let mut base = String::from("\n");
+        base.push_str(&read_to_string(clock_fd, 256));
+        print(&base);
         syscall(8, 0, 0, 0);
     }
 }

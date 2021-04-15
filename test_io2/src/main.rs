@@ -25,8 +25,8 @@ use alloc::vec::Vec;
 pub extern "C" fn _start(heap_address: u64, heap_size: u64) {
     syscall(20, 1, 0, 0);
 
-    set_screen_size(1, 40);
-    set_screen_position(0, 20);
+    set_screen_size(19, 79);
+    set_screen_position(1, 1);
     ferr_os_librust::allocator::init(heap_address, heap_size);
     let mut a = String::new();
     a.push('a');

@@ -21,13 +21,18 @@ extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64) {
-    syscall(20, heap_address, heap_size, 0);
+    syscall(20, 1, 0, 0);
+
+    set_screen_size(1, 40);
+    set_screen_position(0, 20);
     ferr_os_librust::allocator::init(heap_address, heap_size);
     let mut a = String::new();
     a.push('a');
+    if fork() == 0 {
+        exec((&a as *const String) as u64)
+    }
     //print(&a);
     //println!("Whelp!");
     main();
@@ -37,21 +42,37 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64) {
 fn main() {
     let read_buffer = [0_u8; 256];
     let mut buffer = [0_u8; 256];
-    
+
     loop {
         let address = VirtAddr::from_ptr(read_buffer.as_ptr() as *mut u8);
-        let length = syscall(0, 0, address.as_u64(), 256); 
-        let write_length = ferr_os_librust::interfaces::keyboard::decode_buffer(&read_buffer[..], &mut buffer[..], length);
+        let length = syscall(0, 0, address.as_u64(), 256);
+        let write_length = ferr_os_librust::interfaces::keyboard::decode_buffer(
+            &read_buffer[..],
+            &mut buffer[..],
+            length,
+        );
         print_buffer(&buffer[..], write_length);
         halt();
     }
 }
 
 fn fork() -> u64 {
-    syscall(5, 0, 0, 0, 0)
+    syscall(5, 0, 0, 0) as u64
 }
 
-fn print_buffer(buffer : &[u8], size : usize) {
+fn exec(s: u64) {
+    syscall(6, s, 0, 0);
+}
+
+fn set_screen_size(height: u64, width: u64) {
+    syscall(11, height, width, 0);
+}
+
+fn set_screen_position(height: u64, width: u64) {
+    syscall(12, height, width, 0);
+}
+
+fn print_buffer(buffer: &[u8], size: usize) {
     let mut index = 0_usize;
     let mut t: [u8; 256] = [0; 256];
 

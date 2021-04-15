@@ -24,7 +24,9 @@ use alloc::vec::Vec;
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64) {
-    syscall(20, heap_address, heap_size, 0);
+    syscall(20, 2, 0, 0);
+    set_screen_size(19, 79);
+    set_screen_position(1, 1);
     ferr_os_librust::allocator::init(heap_address, heap_size);
     let mut a = String::new();
     a.push('a');
@@ -55,6 +57,22 @@ fn main() {
         print(&String::from("\n"));
         syscall(8, 0, 0, 0);
     }
+}
+
+fn fork() -> u64 {
+    syscall(5, 0, 0, 0) as u64
+}
+
+fn exec() {
+    syscall(6, 0, 0, 0);
+}
+
+fn set_screen_size(height: u64, width: u64) {
+    syscall(11, height, width, 0);
+}
+
+fn set_screen_position(height: u64, width: u64) {
+    syscall(12, height, width, 0);
 }
 
 fn open(path: String) -> usize {

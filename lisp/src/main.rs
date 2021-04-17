@@ -1,3 +1,8 @@
+// #![doc(html_favicon_url = "https://github.com/Sup3Legacy/FerrOS/blob/main/docs/images/FerrOS.ico")]
+// #![doc(html_logo_url = "https://github.com/Sup3Legacy/FerrOS/blob/main/FerrOS.png")]
+
+//! A minimal Lisp interpreter for [`FerrOS`](https://github.com/Sup3Legacy/FerrOS).
+
 #![no_std]
 #![feature(start)]
 #![feature(asm)]
@@ -17,179 +22,16 @@ use x86_64::VirtAddr;
 mod serial;
 
 extern crate alloc;
-//extern crate combine;
 
 use alloc::collections::btree_map::BTreeMap;
 use alloc::fmt;
 use alloc::format;
 use alloc::string::String;
-use alloc::vec;
 use alloc::vec::Vec;
 
-use core::ops::Add;
+/// Define the AST.
 
-struct IFunc {
-    fun: dyn Fn(Vec<LispVal>) -> Option<(LispVal, EnvCtx)>,
-}
-
-type ParserResult<'a, A> = Option<(&'a str, &'a A)>;
-
-type Parser<'a, A> = dyn Fn(&str) -> ParserResult<'a, A>;
-
-/*
-// Rust ne sait pas faire des traits pour les types non définits dans la même crate.
-struct ParserWrap<'a, A>(Parser<'a, A>);
-impl<'a, A> ParserWrap<'a, A> {
-    fn unwrap(&self) -> Parser<'a, A> {
-        match self {
-            ParserWrap(p) => p,
-        }
-    }
-}
-
-impl<'a, A> Add for &ParserWrap<'a, A> {
-    type Output = Self;
-
-    fn add(self, first_p: Self) -> Self {
-        // |s: &str| apply_if_none<'a, A>(first_p(s), self, s)
-        |s: &str| (first_p.unwrap())(s).or(self(s))
-    }
-}
-
-fn apply_if_none<'a, A>(
-    o: ParserResult<'a, A>,
-    f: &Parser<'a, A>,
-    s: &str,
-) -> &'a ParserResult<'a, A> {
-    &o.or(f(s))
-}
-
-fn apply_if_none<'a, A>(o: ParserResult<'a, A>, f: &Parser<'a, A>) -> &'a Parser<'a, A> {
-    match o {
-        None => &move |s| f(s),
-        _ => &p_from_const(o),
-    }
-}
-
-fn p_from_const<'a, A>(c: ParserResult<'a, A>) -> impl Fn(&str) -> ParserResult<'a, A> {
-    move |_s| c
-}
-*/
-
-macro_rules! alt {
-    ($s: expr ; $p: ident) => {
-        $p($s)
-    };
-
-    ($s: expr ; $p: ident | $( $tail: ident )|* ) => {
-        (alt! { $s ; $( $tail )|* }).or($p($s))
-    };
-}
-
-fn parse(s: &str) -> ParserResult<LispVal> {
-    alt! { s ; lisp_nil | lisp_nil | lisp_bool }
-}
-
-fn string_p<'a>(s_p: &'a str, s: &'a str) -> ParserResult<'a, str> {
-    match s.strip_prefix(s_p) {
-        None => None,
-        Some(tail) => Some((tail, s_p)),
-    }
-}
-
-/*
-macro_rules! let_char_p {
-    ( $( $name: ident $char: literal );* ) => {
-        let curried_string_p = |s_p| move |s| string_p(s_p, s);
-        $(
-            let $name = curried_string_p($char);
-        )*
-    }
-}
-*/
-
-macro_rules! alt_string_p {
-    ( $s: expr ; $( $name: ident $string: literal )|* ) => {
-        let curried_string_p = |s_p| move |s| string_p(s_p, s);
-        $(
-            let $name = curried_string_p("$string");
-        )*
-        alt! { $s ; $( $name )|* }
-    };
-}
-
-fn digit_p(s: &str) -> ParserResult<str> {
-    /*
-    let_char_p! {
-        zero_p "0"; one_p "1"; two_p "2"; three_p "3"; four_p "4";
-        five_p "5"; six_p "6"; seven_p "7"; eight_p "8"; nine_p "9"
-    };
-    */
-    /*
-    let curried_string_p = |s_p| move |s| string_p(s_p, s);
-    let zero_p = curried_string_p("0");
-    let one_p = curried_string_p("1");
-    let two_p = curried_string_p("2");
-    let three_p = curried_string_p("3");
-    let four_p = curried_string_p("4");
-    let five_p = curried_string_p("5");
-    let six_p = curried_string_p("6");
-    let seven_p = curried_string_p("7");
-    let eight_p = curried_string_p("8");
-    let nine_p = curried_string_p("9");
-    */
-    /*
-    alt! {
-        s ; zero_p | one_p | two_p | three_p | four_p
-        | five_p | six_p | seven_p | eight_p | nine_p
-    }
-    */
-    alt_string_p! {
-        s ; zero "0" | one "1" | two "2" | three "3" | four "4"
-        | five "5" | six "6" | seven "7" | eight "8" | nine "9"
-    }
-}
-
-// TODO penetrate Maybe
-fn lisp_nil(s: &str) -> ParserResult<LispVal> {
-    string_p("Nil", s).map(|(tail, _)| (tail, &LispVal::Nil))
-}
-
-fn true_p(s: &str) -> ParserResult<LispVal> {
-    string_p("#t", s).map(|(tail, _)| (tail, &LispVal::Bool(true)))
-}
-
-fn false_p(s: &str) -> ParserResult<LispVal> {
-    string_p("#f", s).map(|(tail, _)| (tail, &LispVal::Bool(false)))
-}
-
-fn lisp_bool(s: &str) -> ParserResult<LispVal> {
-    alt! { s ; false_p | true_p }
-}
-
-/*
-Comments
-
-fn lisp_quote(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_s_expr(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_string(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_atom(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_number(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_lisp(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_lambda(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_fun(s: &str) -> ParserResult<LispVal> {
-}
-*/
-
-type EnvCtx<'a> = BTreeMap<&'a str, LispVal<'a>>;
-
+/// We use references in oder to have fixed sized objects.
 enum LispVal<'a> {
     Atom(&'a str),
     List(Vec<LispVal<'a>>),
@@ -201,6 +43,16 @@ enum LispVal<'a> {
     Bool(bool),
 }
 
+/// Environment for evaluating expressions.
+type EnvCtx<'a> = BTreeMap<&'a str, LispVal<'a>>;
+
+/// Represents functions.
+/// The context is needed for scoping.
+struct IFunc {
+    fun: dyn Fn(Vec<LispVal>) -> Option<(LispVal, EnvCtx)>,
+}
+
+/// Define a printer for [LispVal].
 impl<'a> fmt::Display for LispVal<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
@@ -223,6 +75,104 @@ impl<'a> fmt::Display for LispVal<'a> {
         }
     }
 }
+
+// Define the parser.
+
+// Parser generic return type.
+type ParserResult<'a, A> = Option<(&'a str, &'a A)>;
+
+// Type for generic Parsers.
+type Parser<'a, A> = dyn Fn(&str) -> ParserResult<'a, A>;
+
+// Combine parsers.
+macro_rules! alt {
+    ($s: expr ; $p: ident) => {
+        $p($s)
+    };
+
+    ($s: expr ; $p: ident | $( $tail: ident )|* ) => {
+        (alt! { $s ; $( $tail )|* }).or($p($s))
+    };
+}
+
+/// Parses a given string.
+fn string_p<'a>(s_p: &'a str, s: &'a str) -> ParserResult<'a, str> {
+    match s.strip_prefix(s_p) {
+        None => None,
+        Some(tail) => Some((tail, s_p)),
+    }
+}
+
+/// Parses [LispVal::Nil].
+fn lisp_nil(s: &str) -> ParserResult<LispVal> {
+    string_p("Nil", s).map(|(tail, _)| (tail, &LispVal::Nil))
+}
+
+// Booleans.
+
+/// Parses `#t`.
+fn true_p(s: &str) -> ParserResult<LispVal> {
+    string_p("#t", s).map(|(tail, _)| (tail, &LispVal::Bool(true)))
+}
+
+/// Parses `#f`.
+fn false_p(s: &str) -> ParserResult<LispVal> {
+    string_p("#f", s).map(|(tail, _)| (tail, &LispVal::Bool(false)))
+}
+
+/// Parses [LispVal::Bool].
+fn lisp_bool(s: &str) -> ParserResult<LispVal> {
+    alt! { s ; false_p | true_p }
+}
+
+// Numbers.
+
+// Create string parsers and combine them.
+macro_rules! alt_string_p {
+    ( $s: expr ; $( $name: ident $string: literal )|* ) => {
+        let curried_string_p = |s_p| move |s| string_p(s_p, s);
+        $(
+            let $name = curried_string_p("$string");
+        )*
+        alt! { $s ; $( $name )|* }
+    };
+}
+
+/// Parses a digit as a [str].
+fn digit_p(s: &str) -> ParserResult<str> {
+    alt_string_p! {
+        s ; zero "0" | one "1" | two "2" | three "3" | four "4"
+        | five "5" | six "6" | seven "7" | eight "8" | nine "9"
+    }
+}
+
+/// Combine all of the parsers into one to parse a [LispVal].
+fn parse(s: &str) -> ParserResult<LispVal> {
+    alt! { s ; lisp_nil | lisp_nil | lisp_bool }
+}
+
+/*
+TODO
+
+Comments
+
+fn lisp_quote(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_s_expr(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_string(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_atom(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_number(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_lisp(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_lambda(s: &str) -> ParserResult<LispVal> {
+}
+fn lisp_fun(s: &str) -> ParserResult<LispVal> {
+}
+*/
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64) {

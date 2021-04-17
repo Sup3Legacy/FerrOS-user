@@ -17,7 +17,6 @@
 #![feature(abi_x86_interrupt)]
 #![feature(intra_doc_pointers)]
 
-use core::panic::PanicInfo;
 use x86_64::VirtAddr;
 mod serial;
 
@@ -132,7 +131,7 @@ macro_rules! alt_string_p {
     ( $s: expr ; $( $name: ident $string: literal )|* ) => {
         let curried_string_p = |s_p| move |s| string_p(s_p, s);
         $(
-            let $name = curried_string_p("$string");
+            let $name = curried_string_p($string);
         )*
         alt! { $s ; $( $name )|* }
     };
@@ -150,6 +149,40 @@ fn digit_p(s: &str) -> ParserResult<str> {
 fn parse(s: &str) -> ParserResult<LispVal> {
     alt! { s ; lisp_nil | lisp_nil | lisp_bool }
 }
+
+/// Repeats a parser as much as possible and folds the results.
+fn repeat<'a, A>(
+    p: &Parser<'a, A>,
+    s: &str,
+    combine: &(dyn Fn(&A, ParserResult<'a, A>) -> ParserResult<'a, A>),
+) -> ParserResult<'a, A> {
+    p(s).and_then(|actual_res| combine(actual_res.1, repeat(p, actual_res.0, combine)))
+}
+
+/*
+/// TODO
+fn positive_number_combine<'a>(
+    digit: &usize,
+    p: &ParserResult<'a, usize>,
+) -> ParserResult<'a, usize> {
+    p.map(|tail_res| {
+        (
+            tail_res.0,
+            &((format!("{}{}", digit, tail_res.1))
+                .parse::<usize>()
+                .ok()
+                .unwrap()),
+        )
+    }) // TODO + digit
+}
+*/
+
+/*
+/// Parses a positive number.
+fn positive_number_p(s: &str) -> ParserResult<str> {
+    repeat(&digit_p, s, &concat_combine)
+}
+*/
 
 /*
 TODO

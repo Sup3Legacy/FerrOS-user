@@ -28,7 +28,7 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-/// Define the AST.
+/// Define the AST for lisp programs (and lisp values as lisp is homoiconic).
 
 /// We use references in oder to have fixed sized objects.
 enum LispVal<'a> {
@@ -77,13 +77,18 @@ impl<'a> fmt::Display for LispVal<'a> {
 
 // Define the parser.
 
-// Parser generic return type.
-type ParserResult<'a, A> = Option<(&'a str, &'a A)>;
+/// Unwrapped parser generic return type.
+type UnwrappedParserResult<'a, A> = (&'a str, A);
 
-// Type for generic Parsers.
+/// Parser generic return type.
+type ParserResult<'a, A> = Option<UnwrappedParserResult<'a, A>>;
+
+/// Parser generic type.
 type Parser<'a, A> = dyn Fn(&str) -> ParserResult<'a, A>;
 
-// Combine parsers.
+// Parser combinators.
+
+/// Alternative parser combiner. Tries the rightmost parser first.
 macro_rules! alt {
     ($s: expr ; $p: ident) => {
         $p($s)
@@ -94,39 +99,29 @@ macro_rules! alt {
     };
 }
 
-/// Parses a given string.
-fn string_p<'a>(s_p: &'a str, s: &'a str) -> ParserResult<'a, str> {
-    match s.strip_prefix(s_p) {
-        None => None,
-        Some(tail) => Some((tail, s_p)),
-    }
+/// Repeats a parser as much as possible and folds the results with `combine`.
+fn repeat<'a, A>(p: &Parser<'a, A>, s: &str, combine: &dyn Fn(A, A) -> A) -> ParserResult<'a, A> {
+    p(s).and_then(|actual_res: UnwrappedParserResult<A>| {
+        repeat(p, actual_res.0, combine).map(|tail_res: UnwrappedParserResult<A>| {
+            (tail_res.0, combine(actual_res.1, tail_res.1))
+        })
+    })
 }
 
-/// Parses [LispVal::Nil].
-fn lisp_nil(s: &str) -> ParserResult<LispVal> {
-    string_p("Nil", s).map(|(tail, _)| (tail, &LispVal::Nil))
+fn repeat_usize<'a>(
+    p: &Parser<'a, usize>,
+    s: &str,
+    combine: &dyn Fn(usize, usize) -> usize,
+) -> ParserResult<'a, usize> {
+    p(s).and_then(|actual_res: UnwrappedParserResult<usize>| {
+        repeat(p, actual_res.0, combine).map(|tail_res: UnwrappedParserResult<usize>| {
+            (tail_res.0, combine(actual_res.1, tail_res.1))
+        })
+    })
 }
 
-// Booleans.
-
-/// Parses `#t`.
-fn true_p(s: &str) -> ParserResult<LispVal> {
-    string_p("#t", s).map(|(tail, _)| (tail, &LispVal::Bool(true)))
-}
-
-/// Parses `#f`.
-fn false_p(s: &str) -> ParserResult<LispVal> {
-    string_p("#f", s).map(|(tail, _)| (tail, &LispVal::Bool(false)))
-}
-
-/// Parses [LispVal::Bool].
-fn lisp_bool(s: &str) -> ParserResult<LispVal> {
-    alt! { s ; false_p | true_p }
-}
-
-// Numbers.
-
-// Create string parsers and combine them.
+/// Create string parsers and combine them with [alt!].
+/// Tries the rightmost parser fisrt.
 macro_rules! alt_string_p {
     ( $s: expr ; $( $name: ident $string: literal )|* ) => {
         let curried_string_p = |s_p| move |s| string_p(s_p, s);
@@ -137,56 +132,88 @@ macro_rules! alt_string_p {
     };
 }
 
-/// Parses a digit as a [str].
-fn digit_p(s: &str) -> ParserResult<str> {
+// Parsers.
+
+/// Parses a given string.
+fn string_p<'a>(s_p: &'a str, s: &'a str) -> ParserResult<'a, &'a str> {
+    match s.strip_prefix(s_p) {
+        None => None,
+        Some(tail) => Some((tail, s_p)),
+    }
+}
+
+/// Parses [LispVal::Nil].
+fn lisp_nil(s: &str) -> ParserResult<LispVal> {
+    string_p("Nil", s).map(|(tail, _): UnwrappedParserResult<&str>| (tail, LispVal::Nil))
+}
+
+// Booleans.
+
+/// Parses `#t`.
+fn true_p(s: &str) -> ParserResult<LispVal> {
+    string_p("#t", s).map(|(tail, _): UnwrappedParserResult<&str>| (tail, LispVal::Bool(true)))
+}
+
+/// Parses `#f`.
+fn false_p(s: &str) -> ParserResult<LispVal> {
+    string_p("#f", s).map(|(tail, _): UnwrappedParserResult<&str>| (tail, LispVal::Bool(false)))
+}
+
+/// Parses [LispVal::Bool].
+fn lisp_bool(s: &str) -> ParserResult<LispVal> {
+    alt! { s ; false_p | true_p }
+}
+
+// Numbers.
+
+/// Parses a digit as a [&str].
+fn digit_p_as_str(s: &str) -> ParserResult<&str> {
     alt_string_p! {
         s ; zero "0" | one "1" | two "2" | three "3" | four "4"
         | five "5" | six "6" | seven "7" | eight "8" | nine "9"
     }
 }
 
+/// Convert [&str] to `A`. Can throw errors.
+fn str_to<A: core::str::FromStr>(s: &str) -> A {
+    s.parse::<A>().ok().unwrap()
+}
+
+/// Parses a digit as a [usize].
+fn digit_p(s: &str) -> ParserResult<usize> {
+    digit_p_as_str(s)
+        .map(|(tail, digit): UnwrappedParserResult<&str>| (tail, str_to::<usize>(digit)))
+}
+
+/// Concatenate `digit` and `tail`.
+/// `digit` is the most significant digit of the result.
+fn combine_positive_numbers(digit: usize, tail: usize) -> usize {
+    str_to::<usize>(&*format!("{}{}", digit, tail))
+}
+
+//fn repeat<'a, A>(p: &Parser<'a, A>, s: &str, combine: &dyn Fn(A, A) -> A) -> ParserResult<'a, A> {
+/// Parses a positive number.
+fn positive_number_p(s: &str) -> ParserResult<usize> {
+    repeat_usize(&digit_p, s, &combine_positive_numbers)
+}
+
+// TODO
 /// Combine all of the parsers into one to parse a [LispVal].
 fn parse(s: &str) -> ParserResult<LispVal> {
     alt! { s ; lisp_nil | lisp_nil | lisp_bool }
 }
 
-/// Repeats a parser as much as possible and folds the results.
-fn repeat<'a, A>(
-    p: &Parser<'a, A>,
-    s: &str,
-    combine: &(dyn Fn(&A, ParserResult<'a, A>) -> ParserResult<'a, A>),
-) -> ParserResult<'a, A> {
-    p(s).and_then(|actual_res| combine(actual_res.1, repeat(p, actual_res.0, combine)))
-}
-
-/*
-/// TODO
-fn positive_number_combine<'a>(
-    digit: &usize,
-    p: &ParserResult<'a, usize>,
-) -> ParserResult<'a, usize> {
-    p.map(|tail_res| {
-        (
-            tail_res.0,
-            &((format!("{}{}", digit, tail_res.1))
-                .parse::<usize>()
-                .ok()
-                .unwrap()),
-        )
-    }) // TODO + digit
-}
+/* TODO
+numbers
+test macro
+macro parser_combinator!
+    * repeat
+    | alternative
+    & and
+    ()
 */
 
-/*
-/// Parses a positive number.
-fn positive_number_p(s: &str) -> ParserResult<str> {
-    repeat(&digit_p, s, &concat_combine)
-}
-*/
-
-/*
-TODO
-
+/* TODO
 Comments
 
 fn lisp_quote(s: &str) -> ParserResult<LispVal> {

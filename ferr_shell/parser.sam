@@ -1,0 +1,245 @@
+%{
+
+use alloc::string::String;
+
+use super::command;
+
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+
+pub static mut FIRST_WORD: bool = true;
+
+fn not_implemented(s : String) -> ! {
+  let mut s2 = String::from("not implemented: ");
+  s2.push_str(&s);
+  panic!(&s2)
+}
+
+enum SimpleCommandElement {
+  EltWord(String),
+  EltRedi(command::Redirect),
+}
+
+enum my_unit {
+  MyUnit
+}
+
+fn make_simple_command(elt : SimpleCommandElement, mut cmd : command::SimpleCommand) -> command::SimpleCommand {
+    match elt {
+      SimpleCommandElement::EltWord(w) => {
+        cmd.cmd_line.push(w);
+        cmd
+        },
+      SimpleCommandElement::EltRedi(redi) => {
+        cmd.cmd_redirects.push(redi);
+        cmd
+        },
+    }
+}
+
+fn clean_simple_command(cmd: command::SimpleCommand) -> command::SimpleCommand {
+  unsafe {
+    FIRST_WORD = true;
+  }
+  cmd
+}
+
+%}
+
+%token IF
+%token THEN
+%token ELSE
+%token ELIF
+%token FI
+
+%token LESS
+%token GREATER
+%token GREATER_GREATER
+
+%token AND
+%token AND_AND
+%token NEWLINE
+%token OR_OR
+%token BAR
+%token SEMI
+%token EOF
+
+
+%token<String> WORD
+
+
+
+%left AND
+%left SEMI NEWLINE EOF
+%left AND_AND OR_OR
+%right BAR
+
+
+%start inputunit
+
+
+%%
+
+inputunit<command::Command>:
+| sl = simple_list simple_list_terminator
+    { sl }
+| NEWLINE
+    { command::Command::Nothing }
+| EOF
+    { command::Command::Nothing }
+;
+
+redirection<command::Redirect>:
+| GREATER w = WORD
+    { command::Redirect::Output(w) }
+| LESS w = WORD
+    { command::Redirect::Input(w) }
+| GREATER_GREATER w = WORD
+    { command::Redirect::OutputAppend(w) }
+;
+
+simple_command_element<SimpleCommandElement>:
+| w = WORD
+    { SimpleCommandElement::EltWord(w) }
+| r = redirection
+    { SimpleCommandElement::EltRedi(r) }
+;
+
+simple_command<command::SimpleCommand>:
+| sce = simple_command_element
+    { match sce {
+        SimpleCommandElement::EltWord(w) =>
+            command::SimpleCommand {
+              cmd_line: Vec::from([w]),
+              cmd_redirects: Vec::new(),
+              cmd_bg: false,
+            },
+        SimpleCommandElement::EltRedi(r) =>
+            command::SimpleCommand {
+              cmd_line: Vec::new(),
+              cmd_redirects: Vec::from([r]),
+              cmd_bg: false,
+            }
+      }
+    }
+| sc = simple_command sce = simple_command_element
+    { make_simple_command(sce, sc) }
+;
+
+command<command::Command>:
+  | sc = simple_command
+    { command::Command::SimpleCommand(clean_simple_command(sc)) }
+  | shc = shell_command
+    { unsafe { FIRST_WORD = true}; shc }
+;
+
+shell_command<command::Command>:
+  | ifc = if_command
+    { ifc }
+;
+
+if_command<command::Command>:
+| IF cl1 = compound_list THEN cl2 = compound_list FI
+    { command::Command::If(Box::new(cl1), Box::new(cl2), Box::new(command::Command::Nothing)) }
+| IF cl1 = compound_list THEN cl2 = compound_list ELSE cl3 = compound_list FI
+    { command::Command::If (Box::new(cl1), Box::new(cl2), Box::new(cl3)) }
+| IF cl1 = compound_list THEN cl2 = compound_list ec = elif_clause FI
+    { command::Command::If (Box::new(cl1), Box::new(cl2), Box::new(ec)) }
+;
+
+elif_clause<command::Command>:
+| ELIF cl1 = compound_list THEN cl2 = compound_list
+    { command::Command::If(Box::new(cl1), Box::new(cl2), Box::new(command::Command::Nothing)) }
+| ELIF cl1 = compound_list THEN cl2 = compound_list ELSE cl3 = compound_list
+    { command::Command::If (Box::new(cl1), Box::new(cl2), Box::new(cl3)) }
+| ELIF cl1 = compound_list THEN cl2 = compound_list ec = elif_clause
+    { command::Command::If(Box::new(cl1), Box::new(cl2), Box::new(ec)) }
+;
+
+list<command::Command>:
+| newline_list l = list0
+    { l }
+;
+
+compound_list<command::Command>:
+| l = list
+    { l }
+| newline_list l = list1
+    { l }
+;
+
+list0<command::Command>:
+| l = list1 NEWLINE newline_list
+    { l }
+| l = list1 AND newline_list
+    { l.make_async() }
+| l = list1 SEMI newline_list
+    { l }
+;
+
+list1<command::Command>:
+| l1 = list1 AND_AND newline_list l2 = list1
+    { command::Command::Connection (Box::new(l1), command::Connector::And, Box::new(l2)) }
+| l1 = list1 OR_OR newline_list l2 = list1
+    { command::Command::Connection (Box::new(l1), command::Connector::Or, Box::new(l2)) }
+| l1 = list1 AND newline_list l2 = list1
+    {
+    command::Command::Connection (Box::new(l1.make_async()), command::Connector::Seq, Box::new(l2))
+    }
+| l1 = list1 SEMI newline_list l2 = list1
+    { command::Command::Connection (Box::new(l1), command::Connector::Seq, Box::new(l2)) }
+| l1 = list1 NEWLINE newline_list l2 = list1
+    { command::Command::Connection (Box::new(l1), command::Connector::Seq, Box::new(l2)) }
+| pc = pipeline_command
+    { pc }
+;
+
+simple_list_terminator<my_unit>:
+| NEWLINE
+    { my_unit::MyUnit }
+| EOF
+    { my_unit::MyUnit }
+;
+
+newline_list<my_unit>:
+  | /* empty */
+    { my_unit::MyUnit }
+  | newline_list NEWLINE
+    { my_unit::MyUnit }
+;
+
+simple_list<command::Command>:
+| sl = simple_list1
+    { sl }
+| sl = simple_list1 AND
+    { sl.make_async()}
+| sl = simple_list1 SEMI
+    { sl }
+;
+
+simple_list1<command::Command>:
+| sl1 = simple_list1 AND_AND newline_list sl2 = simple_list1
+    { command::Command::Connection (Box::new(sl1), command::Connector::And, Box::new(sl2)) }
+| sl1 = simple_list1 OR_OR newline_list sl2 = simple_list1
+    { command::Command::Connection (Box::new(sl1), command::Connector::Or, Box::new(sl2)) }
+| sl1 = simple_list1 AND sl2 = simple_list1
+    {
+      command::Command::Connection (Box::new(sl1.make_async()), command::Connector::Seq, Box::new(sl2))
+    }
+| sl1 = simple_list1 SEMI sl2 = simple_list1
+    { command::Command::Connection (Box::new(sl1), command::Connector::Seq, Box::new(sl2)) }
+| pc = pipeline_command
+    { pc }
+;
+
+pipeline_command<command::Command>:
+| p = pipeline
+    { p }
+;
+
+pipeline<command::Command>:
+| p1 = pipeline BAR newline_list p2 = pipeline
+    { command::Command::Connection(Box::new(p1), command::Connector::Pipe, Box::new(p2)) }
+| c = command
+    { c }
+;

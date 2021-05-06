@@ -1,4 +1,15 @@
-all: release
+PARSER=/Users/samuel/Programmes/Samenhir/samenhir
+LEXER=/Users/samuel/Programmes/Ferrolex/ferrolex
+
+all: parser lexer release
+
+parser:
+	$(PARSER) parser.sam -l rust
+	mv parser.rs src/parser.rs
+
+lexer:
+	$(LEXER) lexer.frl -l rust
+	mv lexer.rs src/lexer.rs
 
 fmt:
 	cargo fmt

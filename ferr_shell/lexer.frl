@@ -1,27 +1,27 @@
 {
-    use super::command
-    use super::parser
+use super::command;
+use super::parser;
 
-    enum LexicalErr {
-        UnclosedComment,
+pub enum LexicalErr {
+    UnclosedComment,
+}
+
+pub struct LexicalError(pub LexicalErr);
+
+fn keyword_of_string(str: &str) -> Option<parser::Token> {
+    unsafe {
+        super::FIRST_WORD = false
     };
 
-    pub struct LexicalError(pub LexicalErr);
-
-    fun keyword_of_string(str: &str) -> Option<parser::Token> {
-        unsafe {
-            super::first_word = false
-        };
-
-        match str with {
-            "if" => Some(parser::Token::IF),
-            "then" => Some(parser::Token::THEN),
-            "else" => Some(parser::Token::ELSE),
-            "elif" => Some(parser::Token::ELIF),
-            "fi" => Some(parser::Token::FI),
-            _ => None,
-        }
+    match str {
+        "if" => Some(parser::Token::IF),
+        "then" => Some(parser::Token::THEN),
+        "else" => Some(parser::Token::ELSE),
+        "elif" => Some(parser::Token::ELIF),
+        "fi" => Some(parser::Token::FI),
+        _ => None,
     }
+}
 
 
 /*  let newline lexbuf =
@@ -40,129 +40,130 @@ let ident1 = special_char | almost_all;
 let ident = ( special_char | [^ '\n' ' ' '\t' '<' '>' '&' '|' ';' '"' ] )+;
 
 rule token = parse
+  | eof
+      { Ok(parser::Token::EOF) }
   | '#'
       { comment(lexbuf); token(lexbuf) }
   | '\n'
-      { newline(lexbuf); parser::Token::NEWLINE }
+      { lexbuf.newline(); Ok(parser::Token::NEWLINE) }
   | space
       { token(lexbuf)}
   | '<'
-      { parser::Token::LESS }
+      { Ok(parser::Token::LESS) }
   | '>'
-      { parser::Token::GREATER }
+      { Ok(parser::Token::GREATER) }
   | ">>"
-      { parser::Token::GREATER_GREATER }
+      { Ok(parser::Token::GREATER_GREATER) }
   | '&'
-      { parser::Token::AND }
+      { Ok(parser::Token::AND) }
   | "&&"
-      { parser::Token::AND_AND }
+      { Ok(parser::Token::AND_AND) }
   | "||"
-      { parser::Token::OR_OR }
+      { Ok(parser::Token::OR_OR) }
   | '|'
-      { parser::Token::BAR }
+      { Ok(parser::Token::BAR) }
   | ';'
-      { parser::Token::SEMI }
+      { Ok(parser::Token::SEMI) }
   | ident as s
       {
-        match unsafe { Msh_misc.first_word }, keyword_of_string(s) {
-        true, Some kw => kw,
-        _ =>
+        match (unsafe { parser::FIRST_WORD }, keyword_of_string(&s)) {
+        (true, Some(kw)) => Ok(kw),
+        _ => {
             let mut lb = Lexbuf::new(s);
-            word(lb)
+            word(&mut lb)
             }
         }
+      }
   | '"'
       {
-        double_quote(String::new(), lexbuf)
+        double_quote(lexbuf)
       }
-  | eof
-      { parser::Token::EOF }
   | [0-255]
       { panic!("error")}
     
 and word = parse
+  | eof
+      { Ok(parser::Token::WORD(String::new())) }
   | [ '\n' ' ' '\t' '<' '>' '&' '|' ';' ]
       { panic!("Error") }
   | '"'
       { 
         let mut s1 = match double_quote(lexbuf) {
-            parser::Token::Word(s) => s,
+            Ok(parser::Token::WORD(s)) => s,
             _ => panic!("should not happen"),
-        }
+        };
         match word(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
       }
 
   | '\\' [0-255] as c
-    { let s1 = String::from(c[1]);
+    { let mut s1 = String::from(c.chars().nth(1).unwrap());
         match word(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(&s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
         
     }
-  | eof
-      { parser::Token::Word(String::new()) }
   | [0-255] as c
       {
-        let s1 = String::from(c[1]);
+        let mut s1 = String::from(c.chars().nth(1).unwrap());
         match word(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(&s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
       }
 
 and double_quote = parse
+  | eof
+      { panic!("Unclosed String") }
   | '\n'
     {
-        newline lexbuf;
-        let s1 = String::from("\n");
+        lexbuf.newline();
+        let mut s1 = String::from("\n");
         match double_quote(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(&s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
     }
   | '\"' as t1
-      { parser::Token::Word(String::new()) }
+      { Ok(parser::Token::WORD(String::new())) }
   | '"' as t2
     {
-        let s1 = String::from("\"");
+        let mut s1 = String::from("\"");
         match double_quote(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(&s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
     }
   | '\\' [0-255] as c
       {
-        let s1 = String::from(c);
+        let mut s1 = String::from(c.chars().nth(1).unwrap());
         match double_quote(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(&s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
     }
   | [^ '\\' '\"' '\n']+ as s
     {
-        let s1 = String::from(s);
+        let mut s1 = String::from(s);
         match double_quote(lexbuf) {
-            parser::Token::Word(s) => s1.push_str(&s),
+            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
         }
-        parser::Token::Word(s1)
+        Ok(parser::Token::WORD(s1))
       
     }
-  | eof
-      { panic!("Unclosed String") }
 
 and comment = parse
   | '\n'
-      { newline(lexbuf); comment(lexbuf) }
+      { lexbuf.newline(); comment(lexbuf) }
   | [0-255]
       { comment(lexbuf) }

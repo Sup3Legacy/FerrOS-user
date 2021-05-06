@@ -2961,12 +2961,13 @@ fn goto(i: usize, read_rule: &str) -> isize {
 }
 
 fn action_all(
-    new_token: fn() -> Result<Token, &'static str>,
+    new_token: fn(&super::lexer::Lexbuf) -> Result<Token, &'static str>,
+    mut lexbuf: &super::lexer::Lexbuf,
     mut etat: usize,
 ) -> Result<command::Command, Errors> {
     let mut pile = Vec::<RulesType>::new();
     let mut liste_etats = Vec::<usize>::new();
-    let mut next_token = match new_token() {
+    let mut next_token = match new_token(lexbuf) {
         Ok(t) => t,
         Err(s) => return Err(Errors::LexingError(s)),
     };
@@ -3001,7 +3002,7 @@ fn action_all(
                 liste_etats.push(etat);
                 pile.push(RulesType::Tok(next_token));
                 etat = i;
-                next_token = match new_token() {
+                next_token = match new_token(lexbuf) {
                     Ok(t) => t,
                     Err(s) => return Err(Errors::LexingError(s)),
                 };
@@ -3011,6 +3012,9 @@ fn action_all(
     }
 }
 
-pub fn inputunit(lexer: fn() -> Result<Token, &'static str>) -> Result<command::Command, Errors> {
-    action_all(lexer, 11)
+pub fn inputunit(
+    lexer: fn(&super::lexer::Lexbuf) -> Result<Token, &'static str>,
+    mut lexbuf: &super::lexer::Lexbuf,
+) -> Result<command::Command, Errors> {
+    action_all(lexer, lexbuf, 11)
 }

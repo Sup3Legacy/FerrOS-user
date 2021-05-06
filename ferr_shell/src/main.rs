@@ -10,6 +10,7 @@ use x86_64::VirtAddr;
 extern crate alloc;
 
 pub mod command;
+pub mod lexer;
 pub mod parser;
 pub mod syscall;
 

@@ -28,9 +28,9 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "bootloader"
-version = "0.9.16"
+version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cb1dc91ba8f16c89133c569bc2516833a632a654d61d228b16ae8d2bad5ed8a"
+checksum = "bfe7a297d22859b1cb0b939cfa0b01288d77804c8544acefd2c1135135587f7d"
 
 [[package]]
 name = "cfg-if"
@@ -56,8 +56,7 @@ checksum = "654fb2472cc369d311c547103a1fa81d467bef370ae7a0680f65939895b1182a"
 [[package]]
 name = "cpuio"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d531514efb06912141fa65967447de805691b685a7565c87d1765afe34a98aa7"
+source = "git+https://github.com/Pollux3737/cpuio#77235e7da451805f848b148164b2de33af3c72fa"
 
 [[package]]
 name = "crossbeam-queue"
@@ -83,7 +82,7 @@ dependencies = [
 [[package]]
 name = "ferr_os_librust"
 version = "0.1.0"
-source = "git+https://github.com/Sup3Legacy/FerrOS-librust#b01bf27cb3df2221c589fab4ed3c3dfd36f1834d"
+source = "git+https://github.com/Sup3Legacy/FerrOS-librust#54ca756a6275313f5b5d25b4288e0b35299ba58e"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",
@@ -102,21 +101,21 @@ dependencies = [
 
 [[package]]
 name = "futures-core"
-version = "0.3.13"
+version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15496a72fabf0e62bdc3df11a59a3787429221dd0710ba8ef163d6f7a9112c94"
+checksum = "098cd1c6dda6ca01650f1a37a794245eb73181d0d4d4e955e2f3c37db7af1815"
 
 [[package]]
 name = "futures-task"
-version = "0.3.13"
+version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa189ef211c15ee602667a6fcfe1c1fd9e07d42250d2156382820fba33c9df80"
+checksum = "ba7aa51095076f3ba6d9a1f702f74bd05ec65f555d70d2033d55ba8d69f581bc"
 
 [[package]]
 name = "futures-util"
-version = "0.3.13"
+version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1812c7ab8aedf8d6f2701a43e1243acdbcc2b36ab26e2ad421eb99ac963d96d1"
+checksum = "3c144ad54d60f23927f0a6b6d816e4271278b64f005ad65e4e35291d2de9c025"
 dependencies = [
  "futures-core",
  "futures-task",
@@ -135,18 +134,18 @@ dependencies = [
 
 [[package]]
 name = "linked_list_allocator"
-version = "0.8.11"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "822add9edb1860698b79522510da17bef885171f75aa395cff099d770c609c24"
+checksum = "d0b725207570aa16096962d0b20c79f8a543df2280bd3c903022b9b0b4d7ea68"
 dependencies = [
  "spinning_top",
 ]
 
 [[package]]
 name = "lock_api"
-version = "0.3.4"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4da24a77a3d8a6d4862d95f72e6fdb9c09a643ecdb402d754004a557f2bec75"
+checksum = "0382880606dff6d15c9476c416d18690b72742aa7b605bb6dd6ec9030fbf07eb"
 dependencies = [
  "scopeguard",
 ]
@@ -166,8 +165,7 @@ checksum = "5c6f2d937e3b8d63449b01401e2bae4041bc9dd1129c2e3e0d239407cf6635ac"
 [[package]]
 name = "pic8259_simple"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af2a5497fb8e59bf8015f67b7dff238d75ef445e03f23edac24ac3a8f09be952"
+source = "git+https://github.com/Pollux3737/pic8259_simple.git#b317fb365c429166fa92f300c3043bfd73236082"
 dependencies = [
  "cpuio",
 ]
@@ -198,9 +196,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spinning_top"
-version = "0.1.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "047031d6df5f5ae0092c97aa4f6bb04cfc9c081b4cd4cb9cdb38657994279a00"
+checksum = "8bd0ab6b8c375d2d963503b90d3770010d95bc3b5f98036f948dee24bf4e8879"
 dependencies = [
  "lock_api",
 ]
@@ -209,38 +207,36 @@ dependencies = [
 name = "test_io"
 version = "0.1.0"
 dependencies = [
- "bit_field 0.10.1",
- "bitflags",
- "bootloader",
  "conquer-once",
  "crossbeam-queue",
  "ferr_os_librust",
  "futures-util",
  "lazy_static",
- "linked_list_allocator",
- "pc-keyboard",
- "pic8259_simple",
- "spin",
- "uart_16550",
- "x86_64",
 ]
 
 [[package]]
 name = "uart_16550"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d45a3c9181dc9ba7d35d02b3c36d1604155289d935b7946510fb3d2f4b976d9"
+checksum = "e09a33949dbbdeaa40f59d7ede389bba927c90b7ad411b91bb9617be3694267b"
 dependencies = [
  "bitflags",
  "x86_64",
 ]
 
 [[package]]
-name = "x86_64"
-version = "0.13.5"
+name = "volatile"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f00e138c487966a6efdb30416baff8f973d17c61c9560a6047c74f8828c46fe1"
+checksum = "e4c2dbd44eb8b53973357e6e207e370f0c1059990df850aca1eca8947cf464f0"
+
+[[package]]
+name = "x86_64"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9ce25c8b91769cf3522618360482d4fe8e2abf7056958ae88b1f039d6cf6bc2"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",
+ "volatile",
 ]

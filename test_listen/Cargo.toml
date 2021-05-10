@@ -8,32 +8,5 @@ edition = "2018"
 
 [dependencies]
 ferr_os_librust = {git = "https://github.com/Sup3Legacy/FerrOS-librust"}
-spin = "0.5.2"
-x86_64 = "0.14.1"
-pic8259_simple = {git="https://github.com/Pollux3737/pic8259_simple.git"}
-pc-keyboard = "*"
-linked_list_allocator = "*"
-uart_16550 = "*"
-bitflags = "*"
-bit_field = "*"
 
-[dependencies.lazy_static]
-version = "1.0"
-features = ["spin_no_std"]
-
-
-[dependencies.crossbeam-queue]
-version = "0.2.1"
-default-features = false
-features = ["alloc"]
-
-
-[dependencies.conquer-once]
-version = "0.2.0"
-default-features = false
-
-[dependencies.futures-util]
-version = "*"
-default-features = false
-features = ["alloc"]
 

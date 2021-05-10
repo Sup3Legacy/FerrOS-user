@@ -207,19 +207,7 @@ dependencies = [
 name = "test_listen"
 version = "0.1.0"
 dependencies = [
- "bit_field 0.10.1",
- "bitflags",
- "conquer-once",
- "crossbeam-queue",
  "ferr_os_librust",
- "futures-util",
- "lazy_static",
- "linked_list_allocator",
- "pc-keyboard",
- "pic8259_simple",
- "spin",
- "uart_16550",
- "x86_64",
 ]
 
 [[package]]

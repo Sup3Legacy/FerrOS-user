@@ -6,6 +6,7 @@
 extern crate alloc;
 
 use ferr_os_librust::syscall;
+use ferr_os_librust::io;
 
 use alloc::string::String;
 
@@ -40,21 +41,9 @@ fn main() {
             &mut buffer[..],
             length,
         );
-        print_buffer(&buffer[..], write_length);
+        io::print_buffer(&buffer[..], write_length);
         unsafe {
             syscall::sleep()
         };
-    }
-}
-
-
-fn print_buffer(buffer: &[u8], size: usize) {
-    let mut t: [u8; 256] = [0; 256];
-
-    for c in 0..size {
-        t[c] = buffer[c];
-    }
-    unsafe {
-        syscall::write(1, t.as_mut_ptr(), size);
     }
 }

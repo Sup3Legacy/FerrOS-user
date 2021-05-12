@@ -78,13 +78,15 @@ macro_rules! alt {
 }
 
 /// Repeats a parser as much as possible and folds the results with `combine`.
-// TODO FAUX
 fn repeat<'a, A>(p: Parser<'a, A>, s: &'a str, combine: &dyn Fn(A, A) -> A) -> ParserResult<'a, A> {
-    p(s).and_then(|actual_res: UnwrappedParserResult<A>| {
-        repeat(p, actual_res.0, combine).map(|tail_res: UnwrappedParserResult<A>| {
-            (tail_res.0, combine(actual_res.1, tail_res.1))
-        })
-    })
+    p(s).and_then(
+        |actual_res: UnwrappedParserResult<A>| match repeat(p, actual_res.0, combine) {
+            None => Some(actual_res),
+            x => x.map(|tail_res: UnwrappedParserResult<A>| {
+                (tail_res.0, combine(actual_res.1, tail_res.1))
+            }),
+        },
+    )
 }
 
 /// Create string parsers and combine them with [alt!].

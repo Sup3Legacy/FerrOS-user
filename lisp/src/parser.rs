@@ -77,6 +77,17 @@ macro_rules! alt {
     };
 }
 
+/// Parser combiner: uses the parsers from left to right.
+macro_rules! then {
+    ($s: expr ; $l: expr) => {
+        $l($s)
+    };
+
+    ($s: expr ; $l: expr => $( $tail_p: expr)=>+ ) => {
+        $l($s).and_then(|(tail, _)| then! { tail ; $( $tail_p )=>+ })
+    };
+}
+
 /// Repeats a parser as much as possible and folds the results with `combine`.
 fn repeat<'a, A>(p: Parser<'a, A>, s: &'a str, combine: &dyn Fn(A, A) -> A) -> ParserResult<'a, A> {
     p(s).and_then(
@@ -105,11 +116,7 @@ macro_rules! alt_string_p {
 
 /// Parses a given string.
 fn string_p<'a>(s_p: &'a str, s: &'a str) -> ParserResult<'a, &'a str> {
-    match s.strip_prefix(s_p) {
-        // TODO .map
-        None => None,
-        Some(tail) => Some((tail, s_p)),
-    }
+    s.strip_prefix(s_p).map(|tail| (tail, s_p))
 }
 
 /// Parses [LispVal::Nil].
@@ -149,61 +156,91 @@ fn str_to<A: core::str::FromStr>(s: &str) -> A {
     s.parse::<A>().ok().unwrap()
 }
 
-fn snd_to_str<'a>(res: UnwrappedParserResult<'a, &str>) -> UnwrappedParserResult<'a, usize> {
-    (res.0, str_to::<usize>(res.1))
+fn snd_str_to<'a, A: core::str::FromStr>(
+    res: UnwrappedParserResult<'a, &str>,
+) -> UnwrappedParserResult<'a, A> {
+    (res.0, str_to::<A>(res.1))
 }
 
-/// Parses a digit as a [usize].
-fn digit_p(s: &str) -> ParserResult<usize> {
-    digit_p_as_str(s).map(snd_to_str)
+/// Parses a digit as a [isize].
+fn digit_p(s: &str) -> ParserResult<isize> {
+    digit_p_as_str(s).map(snd_str_to::<isize>)
 }
 
 /// Concatenate `digit` and `tail`.
 /// `digit` is the most significant digit of the result.
-fn combine_positive_numbers(digit: usize, tail: usize) -> usize {
-    str_to::<usize>(&*format!("{}{}", digit, tail))
+fn combine_positive_numbers(digit: isize, tail: isize) -> isize {
+    str_to::<isize>(&*format!("{}{}", digit, tail))
 }
 
 /// Parses a positive number.
-fn positive_number_p(s: &str) -> ParserResult<usize> {
-    repeat::<usize>(&digit_p, s, &combine_positive_numbers)
+fn positive_number_p(s: &str) -> ParserResult<isize> {
+    repeat::<isize>(&digit_p, s, &combine_positive_numbers)
+}
+
+/// Parses a negative number.
+fn negative_number_p(s: &str) -> ParserResult<isize> {
+    let minus_p = |s| string_p("-", s);
+    (then! { s ; minus_p => positive_number_p }).map(|(tail, n)| (tail, -n))
+}
+
+/// Parses [LispVal::Number].
+// TODO overflow
+fn lisp_number(s: &str) -> ParserResult<LispVal> {
+    (alt! {s ; positive_number_p | negative_number_p }).map(|(tail, n)| (tail, LispVal::Number(n)))
+}
+
+/// Parses a char as a string.
+fn char_p(s: &str) -> ParserResult<&str> {
+    alt_string_p! { s ;
+        a "a" | b "b" | c "c" | d "d" | e "e" | f "f" | g "g" | h "h" | i "i" |
+        j "j" | k "k" | l "l" | m "m" | n "n" | o "o" | p "p" | q "q" | r "r" |
+        s_p "s" | t "t" | u "u" | v "v" | w "w" | x "x" | y "y" | z "z"
+    }
+}
+
+fn lisp_string(s: &str) -> ParserResult<LispVal> {
+    let quote_p = |s| string_p(r#"""#, s);
+    (then! { s ; quote_p => char_p => quote_p })
+        .map(|(tail, string)| (tail, LispVal::String(string)))
 }
 
 // TODO
 /// Combine all of the parsers into one to parse a [LispVal].
 fn parse(s: &str) -> ParserResult<LispVal> {
-    alt! { s ; lisp_nil | lisp_nil | lisp_bool }
+    alt! { s ; lisp_nil | lisp_bool | lisp_number | lisp_string }
 }
 
 /* TODO
 documentation
-isize
-numbers
 test macro
+
+variables (atom)
+lambda
+list
++
+-
+*
+/
+==
+<
+quote
+if
+let
+begin
+define
+not
+or
+and
+print
+concat strings
+
+comments
+
 macro parser_combinator!
     * repeat
+    +
     | alternative
-    & and
-    ()
-*/
-
-/* TODO
-Comments
-
-fn lisp_quote(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_s_expr(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_string(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_atom(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_number(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_lisp(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_lambda(s: &str) -> ParserResult<LispVal> {
-}
-fn lisp_fun(s: &str) -> ParserResult<LispVal> {
-}
+    => and
+    () list
 */

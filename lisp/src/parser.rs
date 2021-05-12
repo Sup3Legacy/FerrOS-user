@@ -6,6 +6,8 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 
+use alloc::borrow::ToOwned;
+
 /// Define the AST for lisp programs (and lisp values as lisp is homoiconic).
 
 /// We use references in oder to have fixed sized objects.
@@ -190,18 +192,24 @@ fn lisp_number(s: &str) -> ParserResult<LispVal> {
     (alt! {s ; positive_number_p | negative_number_p }).map(|(tail, n)| (tail, LispVal::Number(n)))
 }
 
-/// Parses a char as a string.
-fn char_p(s: &str) -> ParserResult<&str> {
-    alt_string_p! { s ;
-        a "a" | b "b" | c "c" | d "d" | e "e" | f "f" | g "g" | h "h" | i "i" |
-        j "j" | k "k" | l "l" | m "m" | n "n" | o "o" | p "p" | q "q" | r "r" |
-        s_p "s" | t "t" | u "u" | v "v" | w "w" | x "x" | y "y" | z "z"
+fn is_letter(c: char) -> bool {
+    matches!(c, 'a'..='z') || matches!(c, 'A'..='Z')
+}
+
+/// Parses a string of letters as a `&str`.
+/// The parsed string can be empty.
+fn letter_string_p(s: &str) -> ParserResult<&str> {
+    if s.chars().all(is_letter) {
+        Some(("", s))
+    } else {
+        let end = (s.find(|c| !is_letter(c))).unwrap();
+        Some((&s[end..], &s[0..end - 1]))
     }
 }
 
 fn lisp_string(s: &str) -> ParserResult<LispVal> {
     let quote_p = |s| string_p(r#"""#, s);
-    (then! { s ; quote_p => char_p => quote_p })
+    (then! { s ; quote_p => letter_string_p => quote_p })
         .map(|(tail, string)| (tail, LispVal::String(string)))
 }
 
@@ -215,7 +223,7 @@ fn parse(s: &str) -> ParserResult<LispVal> {
 documentation
 test macro
 
-variables (atom)
+variables (atom) warning non empty
 lambda
 list
 +

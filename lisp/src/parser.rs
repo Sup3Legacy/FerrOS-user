@@ -213,17 +213,26 @@ fn lisp_string(s: &str) -> ParserResult<LispVal> {
         .map(|(tail, string)| (tail, LispVal::String(string)))
 }
 
+fn lisp_atom(s: &str) -> ParserResult<LispVal> {
+    letter_string_p(s).and_then(|(tail, name)| {
+        if name == "" {
+            None
+        } else {
+            Some((tail, LispVal::Atom(name)))
+        }
+    })
+}
+
 // TODO
 /// Combine all of the parsers into one to parse a [LispVal].
 fn parse(s: &str) -> ParserResult<LispVal> {
-    alt! { s ; lisp_nil | lisp_bool | lisp_number | lisp_string }
+    alt! { s ; lisp_bool | lisp_number | lisp_string | lisp_atom | lisp_nil }
 }
 
 /* TODO
 documentation
 test macro
 
-variables (atom) warning non empty
 lambda
 list
 +

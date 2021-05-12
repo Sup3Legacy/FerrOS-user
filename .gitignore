@@ -4,3 +4,6 @@ issou/target/
 */target/*
 
 ferr_shell/ferr_shell
+
+lisp/lisp
+lisp/Cargo.lock

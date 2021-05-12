@@ -7,34 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ferr_os_librust = {git = "https://github.com/Sup3Legacy/FerrOS-librust"}
-bootloader = { version = "0.9.8", features = ["map_physical_memory"]}
-spin = "0.5.2"
-x86_64 = "0.13.2"
-pic8259_simple = "*"
-pc-keyboard = "*"
-linked_list_allocator = "*"
+ferr_os_librust = { git = "https://github.com/Sup3Legacy/FerrOS-librust" }
+x86_64 = "*"
+spin = "*"
 uart_16550 = "*"
-bitflags = "*"
-bit_field = "*"
 
 [dependencies.lazy_static]
 version = "1.0"
 features = ["spin_no_std"]
-
-
-[dependencies.crossbeam-queue]
-version = "0.2.1"
-default-features = false
-features = ["alloc"]
-
-
-[dependencies.conquer-once]
-version = "0.2.0"
-default-features = false
-
-[dependencies.futures-util]
-version = "*"
-default-features = false
-features = ["alloc"]
-

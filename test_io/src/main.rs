@@ -23,19 +23,23 @@ use alloc::string::String;
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
+    ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         syscall::debug(2, 0);
+        let fd = syscall::open(String::from("screen/screenfull"), 0);
+        syscall::dup2(1, fd);
         syscall::set_screen_size(1, 40);
         syscall::set_screen_pos(0, 20);
     }
-    ferr_os_librust::allocator::init(heap_address, heap_size);
     main();
 }
 
 #[inline(never)]
 fn main() {
     let clock_fd = unsafe { syscall::open(String::from("hardware/clock"), 0) };
-
+    unsafe {
+        syscall::debug(clock_fd, 42);
+    }
     /*
     let sound_fd = unsafe { syscall::open(String::from("hardware/sound"), 0) };    
     let frequencies: [u64; 13] = [
@@ -51,7 +55,7 @@ fn main() {
     */
     loop {
         let mut base = String::from("\n");
-        base.push_str(&ferr_os_librust::io::read_to_string(clock_fd, 256));
+        base.push_str(&io::read_to_string(clock_fd, 256));
         io::print(&base);
         unsafe {
             syscall::sleep()

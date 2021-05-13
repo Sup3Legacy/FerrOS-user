@@ -9,7 +9,12 @@ use x86_64::VirtAddr;
 
 extern crate alloc;
 
-use alloc::string::String;
+pub mod command;
+pub mod lexer;
+pub mod parser;
+pub mod syscall;
+
+static mut FIRST_WORD: bool = true;
 
 #[no_mangle]
 pub extern "C" fn _start() {

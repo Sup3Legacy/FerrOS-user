@@ -1,5 +1,5 @@
 [package]
-name = "test_io2"
+name = "test_open_text"
 version = "0.1.0"
 authors = ["Samuel VIVIEN <samuel.aime.vivien@free.fr>"]
 edition = "2018"

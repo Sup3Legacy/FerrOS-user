@@ -9,6 +9,7 @@
 #![feature(asm)]
 #![no_main]
 #![feature(intra_doc_pointers)]
+#![feature(array_methods)]
 
 use ferr_os_librust;
 use x86_64::VirtAddr;

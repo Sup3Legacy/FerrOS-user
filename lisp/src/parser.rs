@@ -1,19 +1,19 @@
 extern crate alloc;
 
+use alloc::borrow::ToOwned;
 use alloc::collections::btree_map::BTreeMap;
 use alloc::fmt;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use alloc::borrow::ToOwned;
-
 /// Define the AST for lisp programs (and lisp values as lisp is homoiconic).
 
 /// We use references in oder to have fixed sized objects.
+#[derive(Clone)]
 enum LispVal<'a> {
     Atom(&'a str),
-    List(Vec<LispVal<'a>>),
+    List(Vec<LispVal<'a>>), // TODO use immutable linked lists.
     Number(isize),
     String(&'a str),
     Fun(&'a IFunc),
@@ -87,6 +87,14 @@ macro_rules! then {
 
     ($s: expr ; $l: expr => $( $tail_p: expr)=>+ ) => {
         $l($s).and_then(|(tail, _)| then! { tail ; $( $tail_p )=>+ })
+    };
+}
+
+/// Parser combiner: uses the two parsers from left to right.
+/// Returns sthe parsed value from the left parser.
+macro_rules! thenl {
+    ($s: expr ; $l: expr => $r: expr) => {
+        $l($s).and_then(|(tail, v)| $r(tail).map(|(new_tail, _)| (new_tail, v)))
     };
 }
 
@@ -223,10 +231,57 @@ fn lisp_atom(s: &str) -> ParserResult<LispVal> {
     })
 }
 
+/*
+fn list_p<'a>(p: Parser<LispVal>) -> Parser<'a, LispVal<'a>> {
+    unimplemented! {}
+}
+*/
+
+fn combine_list<'a>(l1: LispVal<'a>, l2: LispVal<'a>) -> LispVal<'a> {
+    unimplemented! {}
+}
+
+/*
+fn repeat<'a, A>(p: Parser<'a, A>, s: &'a str, combine: &dyn Fn(A, A) -> A) -> ParserResult<'a, A> {
+    p(s).and_then(
+        |actual_res: UnwrappedParserResult<A>| match repeat(p, actual_res.0, combine) {
+            None => Some(actual_res),
+            x => x.map(|tail_res: UnwrappedParserResult<A>| {
+                (tail_res.0, combine(actual_res.1, tail_res.1))
+            }),
+        },
+    )
+}
+*/
+fn lisp_list(string: &str) -> ParserResult<LispVal> {
+    let opening_par_p = |s| string_p("(", s);
+    let closing_par_p = |s| string_p(" )", s);
+    let space_p = |s| string_p(" ", s);
+    let space_val_p = |s| then! { s ; space_p => parse };
+    let combine_list = |x, v| {
+        (match v {
+            LispVal::List(l) => LispVal::List([[x].as_slice(), l.as_slice()].concat()),
+            _ => panic! {},
+        })
+    };
+
+    let content_p = move |s: &str| {
+        repeat(
+            &(space_val_p.clone()),
+            &((*s).to_owned()[..]),
+            &(combine_list.clone()),
+        )
+    };
+    let parse_content = |s| then! { s ; opening_par_p => content_p };
+    thenl! { string ; parse_content => closing_par_p }
+
+    // TODO empty list
+}
+
 // TODO
 /// Combine all of the parsers into one to parse a [LispVal].
 fn parse(s: &str) -> ParserResult<LispVal> {
-    alt! { s ; lisp_bool | lisp_number | lisp_string | lisp_atom | lisp_nil }
+    alt! { s ; lisp_bool | lisp_number | lisp_string | lisp_atom | lisp_nil | lisp_list }
 }
 
 /* TODO
@@ -234,7 +289,6 @@ documentation
 test macro
 
 lambda
-list
 +
 -
 *

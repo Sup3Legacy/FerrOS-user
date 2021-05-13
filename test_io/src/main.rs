@@ -23,12 +23,14 @@ use alloc::string::String;
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
+    ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         syscall::debug(2, 0);
+        let fd = syscall::open(String::from("screen/screenfull"), 0);
+        syscall::dup2(1, fd);
         syscall::set_screen_size(1, 40);
         syscall::set_screen_pos(0, 20);
     }
-    ferr_os_librust::allocator::init(heap_address, heap_size);
     main();
 }
 

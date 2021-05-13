@@ -19,15 +19,14 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64) {
     }
     ferr_os_librust::allocator::init(heap_address, heap_size);
 
-    /*
-    let mut a = String::new();
-    a.push('a');
+    
+    let a = String::from("User/root/test_io");
     unsafe {
         if syscall::fork() == 0 {
             syscall::exec(a);
         }
     }
-    */
+    
     main();
 }
 

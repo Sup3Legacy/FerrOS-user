@@ -51,7 +51,7 @@ fn main() {
     */
     loop {
         let mut base = String::from("\n");
-        base.push_str(&read_to_string(clock_fd, 256));
+        base.push_str(&ferr_os_librust::io::read_to_string(clock_fd, 256));
         io::print(&base);
         unsafe {
             syscall::sleep()

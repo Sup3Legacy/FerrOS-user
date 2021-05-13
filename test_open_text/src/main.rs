@@ -8,6 +8,7 @@ use ferr_os_librust::io;
 use ferr_os_librust::syscall;
 
 use alloc::string::String;
+use alloc::format;
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64) {
@@ -26,8 +27,9 @@ fn main() {
     let mut read_buffer = [0_u8; 256];
     let mut buffer = [0_u8; 256];
 
-    let fd = unsafe { ferr_os_librust::syscall::open(String::from("User/root/usr/issou.txt"), 0) };
-    let file = &ferr_os_librust::io::read_to_string(fd, 512);
+    let fd = unsafe { ferr_os_librust::syscall::open(String::from("User/root/issou.txt"), 0) };
+    io::print(&format!("fd: {}. ", fd));
+    let file = &ferr_os_librust::io::read_to_string(fd, 256);
     io::print(&file);
 
     loop {

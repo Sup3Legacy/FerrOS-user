@@ -19,7 +19,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         let fd = syscall::open(String::from("screen/screenfull"), 0);
-        syscall::dup2(io::STD_IN, fd);
+        syscall::dup2(io::STD_OUT, fd);
         syscall::set_screen_size(24, 80);
         syscall::set_screen_pos(1, 0);
     }
@@ -34,7 +34,9 @@ fn main() {
     loop {
         let v = io::read_input(io::STD_IN, 512);
         keyboard::translate(v, &mut s);
+        io::_print(&String::from("\r"));
         io::_print(&s);
+        io::_print(&String::from(" "));
         //print!("{}", s);
     }
 }

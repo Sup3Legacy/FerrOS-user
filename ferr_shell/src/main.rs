@@ -34,8 +34,7 @@ fn main() {
     loop {
         let v = io::read_input(io::STD_IN, 512);
         keyboard::translate(v, &mut s);
-        print!("\r");
-        print!("{}", s);
-        print!(" ");
+        io::_print(&s);
+        //print!("{}", s);
     }
 }

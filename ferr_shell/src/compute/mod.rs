@@ -4,11 +4,12 @@ use alloc::vec::Vec;
 use alloc::collections::BTreeMap;
 use alloc::boxed::Box;
 
-use ferr_os_librust::io;
+use ferr_os_librust::{io, syscall};
 
 mod build_tree;
 mod lexer;
 use build_tree::command::Command;
+
 
 pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
     match lexer::decompose(string) {
@@ -19,31 +20,72 @@ pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
             match build_tree::build_tree(vector) {
                 Err(()) => io::_print(&String::from("Could not parse formula\n")),
                 Ok(command) => {
-                    exec(command, env);
+                    unsafe {
+                        exec(command, env)
+                    };
                 },
             }
         }
     }
 }
 
-fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
+unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
     match command {
         Command::Nothing => 0,
         Command::SimpleCommand(cmd) => {
             if cmd.cmd_line.len() >= 2 && cmd.cmd_line[1] == "=" {
                 if cmd.cmd_line.len() > 2 {
                     env.insert(String::from(&cmd.cmd_line[0]), String::from(&cmd.cmd_line[2]));
-                    /*match env.get("PWD") {
-                        Some(v) => {
-                            io::_print(v);
-                            io::_print(&String::from("\n"));
-                        },
-                        None => io::_print(&String::from("PWD undefined\n")),
-                    }*/
+                    0
+                } else if cmd.cmd_line.len() == 0 {
                     0
                 } else {
-                    //io::_print(&String::from("Wrong length\n"))
-                    1
+                    let prog_name = &cmd.cmd_line[0];
+                    if prog_name.len() == 0 {
+                        io::_print(&String::from("Should not happen compute->exec\n"));
+                        1
+                    } else if prog_name.len() > 1 && prog_name.as_bytes()[0] == b'.' && prog_name.as_bytes()[1] == b'/' {
+                        if let Some(name) = env.get("PWD") {
+                            let id = syscall::fork();
+                            if id == 0 {
+                                let mut name = String::from(name);
+                                for c in prog_name.bytes().skip(1) {
+                                    name.push(c as char);
+                                }
+                                
+                                syscall::exec(name);
+                                io::_print(&String::from("Program not found\n"));
+                                syscall::exit(1)
+                            } else {
+                                syscall::await_end(id)
+                            }
+                        } else {
+                            io::_print(&String::from("Variable PWD not defined (should not happen)\n"));
+                            1
+                        }
+                    } else {
+                        if let Some(name_list_raw) = env.get("PATH") {
+                            let id = syscall::fork();
+                            if id == 0 {
+                                let mut name_list = String::from(name_list_raw);
+                                for name_raw in name_list.split(":") {
+                                    let mut name = String::from(name_raw);
+                                    for c in prog_name.bytes().skip(1) {
+                                        name.push(c as char);
+                                    }
+                                    syscall::exec(name);
+                                }
+
+                                io::_print(&String::from("Program not found\n"));
+                                syscall::exit(1)
+                            } else {
+                                syscall::await_end(id)
+                            }
+                        } else {
+                            io::_print(&String::from("Variable PATH not defined\n"));
+                            1
+                        }
+                    }
                 }
             } else {
                 1

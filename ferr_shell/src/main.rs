@@ -3,20 +3,18 @@
 #![feature(asm)]
 #![no_main]
 
-
 use ferr_os_librust;
-use ferr_os_librust::{syscall, io, print};
 use ferr_os_librust::interfaces::keyboard;
-
+use ferr_os_librust::{io, print, syscall};
 
 extern crate alloc;
-use alloc::string::String;
 use alloc::collections::BTreeMap;
+use alloc::string::String;
 
 static mut ENV: Option<BTreeMap<String, String>> = None;
 
-pub mod remove_variables;
 pub mod compute;
+pub mod remove_variables;
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
@@ -63,7 +61,6 @@ fn main() {
     }
 }
 
-
 fn get_input(intro: &String) -> String {
     let mut begin = String::new();
     let mut end = String::new();
@@ -72,7 +69,7 @@ fn get_input(intro: &String) -> String {
         let v = io::read_input(io::STD_IN, 512);
         let previous_size = begin.len() + end.len();
         keyboard::translate(v, &mut begin, &mut end);
-        for i in previous_size..(1 + begin.len() + end.len()){
+        for i in previous_size..(1 + begin.len() + end.len()) {
             io::_print(&String::from(" "));
         }
         for i in 0..begin.len() {
@@ -92,6 +89,5 @@ fn get_input(intro: &String) -> String {
         io::_print(&begin);
         io::_print(&String::from("|"));
         io::_print(&end);
-
     }
 }

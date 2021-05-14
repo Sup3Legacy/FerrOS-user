@@ -1,15 +1,15 @@
-PARSER=/Users/samuel/Programmes/Samenhir/samenhir
-LEXER=/Users/samuel/Programmes/Ferrolex/ferrolex
+PARSER=../../Samenhir/samenhir
+LEXER=../../Ferrolex/ferrolex
 
 all: parser lexer release
 
 parser:
 	$(PARSER) parser.sam -l rust
-	mv parser.rs src/parser.rs
+	mv parser.rs src/compute/parser.rs
 
 lexer:
 	$(LEXER) lexer.frl -l rust
-	mv lexer.rs src/lexer.rs
+	mv lexer.rs src/compute/lexer.rs
 
 fmt:
 	cargo fmt

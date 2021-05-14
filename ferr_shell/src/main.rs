@@ -28,21 +28,38 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
 
 #[inline(never)]
 fn main() {
+    loop {
+        let s = get_input();
+    }
+}
 
-    let mut input = String::new();
+
+fn get_input() -> String {
+    let mut begin = String::new();
     let mut end = String::new();
 
     loop {
         let v = io::read_input(io::STD_IN, 512);
-        let previous_size = input.len() + end.len();
-        keyboard::translate(v, &mut input, &mut end);
+        let previous_size = begin.len() + end.len();
+        keyboard::translate(v, &mut begin, &mut end);
         io::_print(&String::from("\rFerrOS >>"));
-        io::_print(&input);
+        io::_print(&begin);
         io::_print(&String::from("|"));
         io::_print(&end);
-        for i in previous_size..(1+input.len() + end.len()){
+        for i in previous_size..(1 + begin.len() + end.len()){
             io::_print(&String::from(" "));
         }
-        //print!("{}", s);
+        for i in 0..begin.len() {
+            if begin.as_bytes()[i] == b'\n' {
+                begin.truncate(i);
+                return begin;
+            }
+        }
+        for i in 0..end.len() {
+            if end.as_bytes()[i] == b'\n' {
+                end.truncate(i);
+                return begin + &end;
+            }
+        }
     }
 }

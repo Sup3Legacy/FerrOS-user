@@ -18,7 +18,6 @@ pub enum Redirect {
 pub struct SimpleCommand {
     pub cmd_line: Vec<String>,
     pub cmd_redirects: Vec<Redirect>,
-    pub cmd_bg: bool,
 }
 
 pub enum Command {
@@ -28,6 +27,7 @@ pub enum Command {
     Connection(Box<Command>, Connector, Box<Command>),
 }
 
+/*
 impl Command {
     pub fn make_async(mut self) -> Self {
         match self {
@@ -45,4 +45,4 @@ impl Command {
             _ => self,
         }
     }
-}
+}*/

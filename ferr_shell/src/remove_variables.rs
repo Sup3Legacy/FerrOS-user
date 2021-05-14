@@ -54,8 +54,6 @@ fn parse_var(
             let mut name = String::new();
             for c in string.bytes().skip(pos + 1) {
                 if c == b')' {
-                    io::_print(&name);
-                    io::_print(&String::from(" was read\n"));
                     match env.get(&name) {
                         None => {
                             let mut s2 = String::from("Var ");

@@ -20,7 +20,6 @@ clean: fmt
 
 release: fmt
 	cargo build --release
-	cp -f target/x86_64-ferros/release/ferr_shell ferr_shell
-	cp -f ferr_shell ../../FerrOS/src/ferr_shell
+	cp -f target/x86_64-ferros/release/ferr_shell ../../FerrOS/filesystem/ferr_shell
 
 .PHONY: all fmt clean

@@ -4,8 +4,6 @@ issou/target/
 */target/*
 
 ferr_shell/ferr_shell
-ferr_shell/src/compute/parser.rs
-ferr_shell/src/compute/lexer.rs
 
 lisp/lisp
 lisp/Cargo.lock

@@ -3,75 +3,39 @@
 #![feature(asm)]
 #![no_main]
 
-use core::panic::PanicInfo;
+
 use ferr_os_librust;
-use x86_64::VirtAddr;
+use ferr_os_librust::{syscall, io, print};
+use ferr_os_librust::interfaces::keyboard;
+
+use alloc::string::String;
 
 extern crate alloc;
-
-pub mod command;
-pub mod lexer;
-pub mod parser;
-pub mod syscall;
 
 static mut FIRST_WORD: bool = true;
 
 #[no_mangle]
-pub extern "C" fn _start() {
+pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
+    ferr_os_librust::allocator::init(heap_address, heap_size);
+    unsafe {
+        let fd = syscall::open(String::from("screen/screenfull"), 0);
+        syscall::dup2(io::STD_IN, fd);
+        syscall::set_screen_size(24, 80);
+        syscall::set_screen_pos(1, 0);
+    }
     main();
 }
 
 #[inline(never)]
 fn main() {
-    // syscall(1, 2, 0, 5);
-    // let test = "command arg1 arg2".split_whitespace();
-    // for s in test {
-    //     print(String::from(s))
-    // }
-    // syscall(0, 0, 0, 0);
-    print("hello");
-    // print();
-    // debug!("Just printed `hello`");
-    // syscall(2, 0, 0, 0);
-    // panic!("truc 424242");
-}
 
-fn print(a: &str) {
-    syscall(1, 2, 0, 0);
-    let mut t: [u8; 128] = [0; 128];
-    let mut index = 0_usize;
+    let mut s = String::new();
 
-    for c in a.bytes() {
-        syscall(1, 2, 0, 0);
+    loop {
+        let v = io::read_input(io::STD_IN, 512);
+        keyboard::translate(v, &mut s);
+        print!("\r");
+        print!("{}", s);
+        print!(" ");
     }
-
-    for c in a.bytes() {
-        t[index] = c;
-        index += 1;
-        if index == 128 {
-            t[index - 1] = 0; // We put a guard
-            break;
-        }
-    }
-
-    syscall(1, 2, 0, 0);
-
-    let data_addr = VirtAddr::from_ptr(&t as *const u8);
-    syscall(1, 2, data_addr.as_u64(), index as u64);
-}
-
-#[inline(never)]
-extern "C" fn syscall(nb: u64, arg0: u64, arg1: u64, arg2: u64) -> usize {
-    let res;
-    unsafe {
-        asm!(
-            "mov rax, {}",
-            "mov rdi, {}",
-            "mov rsi, {}",
-            "mov rdx, {}",
-            "int 80h",
-            "mov {}, rax",
-            in(reg) nb, in(reg) arg0, in(reg) arg1, in(reg) arg2, out(reg) res)
-    };
-    res
 }

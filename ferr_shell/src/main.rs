@@ -29,14 +29,20 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
 #[inline(never)]
 fn main() {
 
-    let mut s = String::new();
+    let mut input = String::new();
+    let mut end = String::new();
 
     loop {
         let v = io::read_input(io::STD_IN, 512);
-        keyboard::translate(v, &mut s);
-        io::_print(&String::from("\r"));
-        io::_print(&s);
-        io::_print(&String::from(" "));
+        let previous_size = input.len() + end.len();
+        keyboard::translate(v, &mut input, &mut end);
+        io::_print(&String::from("\rFerrOS >>"));
+        io::_print(&input);
+        io::_print(&String::from("|"));
+        io::_print(&end);
+        for i in previous_size..(1+input.len() + end.len()){
+            io::_print(&String::from(" "));
+        }
         //print!("{}", s);
     }
 }

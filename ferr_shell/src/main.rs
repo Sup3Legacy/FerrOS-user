@@ -5,7 +5,7 @@
 
 use ferr_os_librust;
 use ferr_os_librust::interfaces::keyboard;
-use ferr_os_librust::{io, print, syscall};
+use ferr_os_librust::{io, syscall};
 
 extern crate alloc;
 use alloc::collections::BTreeMap;

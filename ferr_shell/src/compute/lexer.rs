@@ -55,24 +55,12 @@ pub fn decompose(string: String) -> Result<Vec<String>, ()> {
 }
 
 fn get_char(s_in: &String, mut pos: usize, searched: u8) -> Result<(String, usize), ()> {
-    unsafe {
-        ferr_os_librust::syscall::debug(pos, 10);
-    }
     let mut s_out = String::new();
-    unsafe {
-        ferr_os_librust::syscall::debug(pos, 20);
-    }
     while pos < s_in.len() {
         if s_in.as_bytes()[pos] == searched {
             return Ok((s_out, pos + 1))
         } else {
-            unsafe {
-                ferr_os_librust::syscall::debug(pos, 24);
-            }
             s_out.push(s_in.as_bytes()[pos] as char);
-            unsafe {
-                ferr_os_librust::syscall::debug(pos, 42);
-            }
             pos += 1;
         }
     }

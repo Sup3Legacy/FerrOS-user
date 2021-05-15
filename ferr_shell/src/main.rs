@@ -17,7 +17,7 @@ pub mod compute;
 pub mod remove_variables;
 
 #[no_mangle]
-pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
+pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args_number: u64, _args: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         let fd = syscall::open(String::from("screen/screenfull"), 0);

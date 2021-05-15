@@ -7,6 +7,7 @@ use ferr_os_librust::io;
 extern crate alloc;
 
 use alloc::string::String;
+use alloc::vec::Vec;
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args_number: u64, _args: u64) {

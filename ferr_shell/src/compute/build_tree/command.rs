@@ -3,10 +3,10 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 pub enum Connector {
-    Seq,
-    And,
-    Or,
-    Pipe,
+    Seq, // &&
+    And, // &
+    Or, // ||
+    Pipe, // |
 }
 
 pub enum Redirect {

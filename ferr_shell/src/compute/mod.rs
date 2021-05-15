@@ -7,7 +7,7 @@ use ferr_os_librust::{io, syscall};
 
 mod build_tree;
 mod lexer;
-use build_tree::command::Command;
+use build_tree::command::{Command, Connector};
 
 pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
     match lexer::decompose(string) {
@@ -24,11 +24,9 @@ pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
 unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
     match command {
         Command::Nothing => {
-            io::_print(&String::from("Command nothing\n"));
             0
         }
         Command::SimpleCommand(cmd) => {
-            io::_print(&String::from("Command Simple\n"));
             if cmd.cmd_line.len() >= 2 && cmd.cmd_line[1] == "=" {
                 if cmd.cmd_line.len() > 2 {
                     env.insert(
@@ -124,8 +122,35 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
             }
         }
         Command::Connection(cmd1, connect, cmd2) => {
-            io::_print(&String::from("Not handled\n"));
-            1
+            match connect {
+                Connector::Seq => {
+                    let output = exec(*cmd1, env);
+                    if output == 0 {
+                        exec(*cmd2, env)
+                    } else {
+                        output
+                    }
+                },
+
+                Connector::And => {
+                    io::_print(&String::from("& Not handled\n"));
+                    1
+                },
+
+                Connector::Or => {
+                    let output = exec(*cmd1, env);
+                    if output != 0 {
+                        exec(*cmd2, env)
+                    } else {
+                        output
+                    }
+                }
+
+                Connector::Pipe => {
+                    io::_print(&String::from("| Not handled\n"));
+                    1
+                }
+            }
         }
         Command::If(_, _, _) => {
             io::_print(&String::from("If nothing\n"));

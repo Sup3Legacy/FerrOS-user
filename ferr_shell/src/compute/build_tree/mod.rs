@@ -163,8 +163,12 @@ fn build_tree_pipe(vector: Vec<String>) -> Result<command::Command, ()> {
 }
 
 fn build_tree_low(vector: Vec<String>) -> Result<command::Command, ()> {
-    Ok(command::Command::SimpleCommand(command::SimpleCommand {
+    if vector.len() > 0 {
+        Ok(command::Command::SimpleCommand(command::SimpleCommand {
         cmd_line: vector,
         cmd_redirects: Vec::new(),
-    }))
+        }))
+    } else {
+        Ok(command::Command::Nothing)
+    }
 }

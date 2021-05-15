@@ -71,7 +71,14 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                         1
                     }
                 } else {
-                    if let Some(name_list_raw) = env.get("PATH") {
+                    if cmd.cmd_line[0] == "cd" {
+                        if cmd.cmd_line.len() > 1 {
+                            env.insert(String::from("PWD"), String::from(&cmd.cmd_line[1])) ;
+                            0
+                        } else {
+                            1
+                        }
+                    } else if let Some(name_list_raw) = env.get("PATH") {
                         let id = syscall::fork();
                         if id == 0 {
                             let mut name_list = String::from(name_list_raw);
@@ -85,8 +92,8 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                                 }
                                 syscall::exec(name);
                             }
-
                             io::_print(&String::from("Program not found\n"));
+                            loop {};
                             syscall::exit(1)
                         } else {
                             syscall::await_end(id)

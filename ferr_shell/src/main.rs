@@ -26,9 +26,9 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
         syscall::set_screen_pos(1, 0);
         let mut env1 = BTreeMap::new();
         env1.insert(String::from("SHELL"), String::from("FerrSH"));
-        env1.insert(String::from("PWD"), String::from("/"));
+        env1.insert(String::from("PWD"), String::from("User/"));
         env1.insert(String::from("PRINT"), String::from("$(SHELL):$(PWD) >> "));
-        env1.insert(String::from("PATH"), String::from("/User/root/bin/"));
+        env1.insert(String::from("PATH"), String::from("User/root/bin/"));
         ENV = Some(env1);
     }
     main();

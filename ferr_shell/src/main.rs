@@ -50,7 +50,7 @@ fn main() {
             let mut printing = String::from("\r");
             printing.push_str(&intro);
             printing.push_str(&raw);
-            printing.push('\n');
+            printing.push_str(" \n");
             io::_print(&printing);
             match remove_variables::main(&raw, env) {
                 Ok(unfolded) => compute::bash(unfolded, env),

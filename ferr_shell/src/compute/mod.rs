@@ -77,12 +77,32 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                     }
                 } else {
                     if cmd.cmd_line[0] == "cd" {
-                        if cmd.cmd_line.len() > 1 {
-                            env.insert(String::from("PWD"), String::from(&cmd.cmd_line[1]));
-                            0
+                        if cmd.cmd_line.len() > 1 && cmd.cmd_line[1].len() > 0 {
+                            let mut name = String::from(&cmd.cmd_line[1]);
+                            if name.as_bytes()[name.len() - 1] != b'/' {
+                                name.push('/');
+                            }
+
+                            if name.as_bytes()[0] == b'/' {
+                                env.insert(String::from("PWD"), String::from(&name));
+                            } else {
+                                let mut pwd;
+                                match env.get("PWD") {
+                                    None => {pwd = String::from("/")},
+                                    Some(p) => {pwd = String::from(p)},
+                                }
+                                pwd.push_str(&name);
+                                env.insert(String::from("PWD"), String::from(&pwd));
+                            }
                         } else {
-                            1
+                            env.insert(String::from("PWD"), String::from("/"));
                         }
+                        0
+                    } else if cmd.cmd_line[0] == "exit" {
+                        unsafe {
+                            syscall::shutdown(0);
+                        }
+                        1
                     } else if let Some(name_list_raw) = env.get("PATH") {
                         let id = syscall::fork();
                         if id == 0 {

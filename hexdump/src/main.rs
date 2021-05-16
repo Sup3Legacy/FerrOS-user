@@ -6,7 +6,7 @@ use ferr_os_librust::io;
 
 extern crate alloc;
 
-use alloc::string::String;
+use alloc::{fmt::format, string::String};
 use alloc::vec::Vec;
 
 #[no_mangle]
@@ -38,7 +38,9 @@ unsafe fn read_all(path: &String) -> Vec<u8> {
     let mut res = Vec::new();
     let fd = ferr_os_librust::syscall::open(path.clone(), 0);
     loop {
-        let partial = ferr_os_librust::io::read_input(fd, 512);
+        //ferr_os_librust::io::_print(&String::from("Reading...."));
+        let partial = ferr_os_librust::io::read_input(fd, 128);
+        ferr_os_librust::syscall::debug(12, 21);
         if partial.len() == 0 {
             break;
         }

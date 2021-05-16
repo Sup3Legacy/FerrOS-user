@@ -27,8 +27,23 @@ fn main(args: Vec<String>) {
     }
     match args.get(1) {
         None => io::_print(&String::from("Needs at least one argument\n")),
-        Some(s) => {
-            let file = unsafe { read_all(s) };
+        Some(s_1) => {
+            let s;
+            if s_1.len() == 0 {
+                return
+            } else if s_1.as_bytes()[0] == b'/' {
+                s = String::from(s_1);
+            } else if s_1.len() > 2 && s_1.as_bytes()[0] == b'.' && s_1.as_bytes()[1] == b'/' {
+                let mut pwd = String::from(&args[args.len() - 1]);
+                pwd.push_str(&s_1[2..]);
+                s = pwd;
+            } else {
+                let mut pwd = String::from(&args[args.len() - 1]);
+                pwd.push_str(s_1);
+                s = pwd;
+            };
+
+            let file = unsafe { read_all(&s) };
             if let Some(c) = args.get(2) {
                 print_dump(&file, &c[..] == "-C");
             } else {

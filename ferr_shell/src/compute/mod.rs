@@ -245,6 +245,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                         syscall::dup2(io::STD_IN, fd);
                                         syscall::exit(exec(*cmd2, env, true))
                                     } else {
+                                        syscall::close(fd);
                                         wait_end(proc_1, proc_2)
                                     }
                                 }
@@ -273,6 +274,8 @@ unsafe fn wait_end(proc_1: usize, proc_2: usize) -> usize {
         if i1 == proc_2 {
             return syscall::await_end(proc_1)
         }
+
+        syscall::sleep();
 
     }
 }

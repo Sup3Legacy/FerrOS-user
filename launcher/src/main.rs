@@ -14,9 +14,9 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
         ferr_os_librust::allocator::init(heap_address, heap_size);
         let id = syscall::fork();
         if id == 0 {
-            syscall::exec(String::from("User/root/clock"), &Vec::new());
+            syscall::exec(String::from("/usr/clock"), &Vec::new());
         }
         
-        syscall::exec(String::from("User/root/ferr_shell"), &Vec::new());
+        syscall::exec(String::from("/usr/ferr_shell"), &Vec::new());
     }
 }

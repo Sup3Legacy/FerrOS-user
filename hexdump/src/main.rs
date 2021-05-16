@@ -6,8 +6,8 @@ use ferr_os_librust::io;
 
 extern crate alloc;
 
-use alloc::{fmt::format, string::String};
 use alloc::vec::Vec;
+use alloc::{fmt::format, string::String};
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
@@ -20,6 +20,10 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
 fn main(args: Vec<String>) {
     unsafe {
         ferr_os_librust::syscall::debug(args[0].len(), args[1].len());
+    }
+    if args.len() < 3 {
+        io::_print(&String::from("Didn't get any argument \n"));
+        return
     }
     match args.get(1) {
         None => io::_print(&String::from("Needs at least one argument\n")),
@@ -40,24 +44,26 @@ unsafe fn read_all(path: &String) -> Vec<u8> {
     loop {
         //ferr_os_librust::io::_print(&String::from("Reading...."));
         let partial = ferr_os_librust::io::read_input(fd, 128);
-        ferr_os_librust::syscall::debug(12, 21);
-        if partial.len() == 0 {
-            break;
-        }
+        let len = partial.len();
+        ferr_os_librust::syscall::debug(12, len);
         for e in partial {
             res.push(e);
         }
+        if len < 128 {
+            break;
+        }
     }
+    ferr_os_librust::syscall::debug(40, res.len());
     res
 }
 
 fn print_dump(file: &Vec<u8>, cannonical: bool) {
-    let mut res = String::new();
     let len = file.len();
     let mut address = 0_usize;
     loop {
         let mut partial = String::new();
-        partial.push_str(&alloc::format!("{:#08x}", address));
+        let address_str = alloc::format!("{:08x}  ", address);
+        partial.push_str(&address_str);
         for i in 0..16 {
             if address + i >= len {
                 for _ in 0..(16 - i) {
@@ -65,14 +71,14 @@ fn print_dump(file: &Vec<u8>, cannonical: bool) {
                 }
                 break;
             }
-            partial.push_str(&alloc::format!("{:#02x}", file[address + i]));
+            partial.push_str(&alloc::format!("{:02x} ", file[address + i]));
         }
         if cannonical {
             partial.push_str("    |");
             for i in 0..16 {
                 if address + i >= len {
                     for _ in 0..(16 - i) {
-                        partial.push_str(" ");
+                        partial.push(' ');
                     }
                     break;
                 }
@@ -86,11 +92,11 @@ fn print_dump(file: &Vec<u8>, cannonical: bool) {
             partial.push('|');
         }
         partial.push('\n');
-        res.push_str(&partial);
-        address += 10;
+        ferr_os_librust::io::_print(&partial);
+        address += 16;
         if address >= len {
             break;
         }
     }
-    ferr_os_librust::io::_print(&res);
+    ferr_os_librust::io::_print(&String::from("\n"));
 }

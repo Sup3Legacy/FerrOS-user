@@ -97,14 +97,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ferr_shell"
-version = "0.1.0"
-dependencies = [
- "ferr_os_librust",
- "x86_64",
-]
-
-[[package]]
 name = "futures-core"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -127,6 +119,13 @@ dependencies = [
  "futures-task",
  "pin-project-lite",
  "pin-utils",
+]
+
+[[package]]
+name = "hexdump"
+version = "0.1.0"
+dependencies = [
+ "ferr_os_librust",
 ]
 
 [[package]]

@@ -15,13 +15,13 @@ pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
         Ok(vector) => match build_tree::build_tree(vector) {
             Err(()) => io::_print(&String::from("Could not parse formula\n")),
             Ok(command) => {
-                unsafe { exec(command, env) };
+                unsafe { exec(command, env, false) };
             }
         },
     }
 }
 
-unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
+unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background : bool) -> usize {
     match command {
         Command::Nothing => {
             0
@@ -49,8 +49,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                     && prog_name.as_bytes()[1] == b'/'
                 {
                     if let Some(name) = env.get("PWD") {
-                        let id = syscall::fork();
-                        if id == 0 {
+                        if background {
                             let mut name = String::from(name);
                             for c in prog_name.bytes().skip(1) {
                                 name.push(c as char);
@@ -67,7 +66,26 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
-                            syscall::await_end(id)
+                            let id = syscall::fork();
+                            if id == 0 {
+                                let mut name = String::from(name);
+                                for c in prog_name.bytes().skip(1) {
+                                    name.push(c as char);
+                                }
+    
+                                let mut args = cmd.cmd_line;
+                                if let Some(name) = env.get("PWD") {
+                                    args.push(String::from(name))
+                                } else {
+                                    args.push(String::new())
+                                }
+    
+                                syscall::exec(name, &args);
+                                io::_print(&String::from("Program not found\n"));
+                                syscall::exit(1)
+                            } else {
+                                syscall::await_end(id)
+                            }
                         }
                     } else {
                         io::_print(&String::from(
@@ -99,13 +117,22 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                         }
                         0
                     } else if cmd.cmd_line[0] == "exit" {
-                        unsafe {
-                            syscall::shutdown(0);
+                        if background {
+                            if cmd.cmd_line.len() >= 2 {
+                                let i = &cmd.cmd_line[1];
+                                if i == "0" {
+                                    syscall::exit(0)
+                                } else {
+                                    syscall::exit(1)
+                                }
+                            } else {
+                                syscall::exit(0)
+                            }
+                        } else {
+                            syscall::shutdown(0)
                         }
-                        1
                     } else if let Some(name_list_raw) = env.get("PATH") {
-                        let id = syscall::fork();
-                        if id == 0 {
+                        if background {
                             let mut name_list = String::from(name_list_raw);
                             for name_raw in name_list.split(":") {
                                 let mut name = String::from(name_raw);
@@ -129,10 +156,37 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                                 syscall::exec(name, &args);
                             }
                             io::_print(&String::from("Program not found\n"));
-                            loop {}
                             syscall::exit(1)
                         } else {
-                            syscall::await_end(id)
+                            let id = syscall::fork();
+                            if id == 0 {
+                                let mut name_list = String::from(name_list_raw);
+                                for name_raw in name_list.split(":") {
+                                    let mut name = String::from(name_raw);
+                                    if name.as_bytes()[name.len() - 1] != b'/' {
+                                        name.push('/');
+                                    }
+                                    for c in prog_name.bytes() {
+                                        name.push(c as char);
+                                    }
+
+                                    let mut args = Vec::new();
+                                    for a in cmd.cmd_line.iter() {
+                                        args.push(String::from(a))
+                                    }
+
+                                    if let Some(name) = env.get("PWD") {
+                                        args.push(String::from(name))
+                                    } else {
+                                        args.push(String::new())
+                                    }
+                                    syscall::exec(name, &args);
+                                }
+                                io::_print(&String::from("Program not found\n"));
+                                syscall::exit(1)
+                            } else {
+                                syscall::await_end(id)
+                            }
                         }
                     } else {
                         io::_print(&String::from("Variable PATH not defined\n"));
@@ -141,12 +195,13 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                 }
             }
         }
+
         Command::Connection(cmd1, connect, cmd2) => {
             match connect {
                 Connector::Seq => {
-                    let output = exec(*cmd1, env);
+                    let output = exec(*cmd1, env, false);
                     if output == 0 {
-                        exec(*cmd2, env)
+                        exec(*cmd2, env, false)
                     } else {
                         output
                     }
@@ -158,17 +213,44 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                 },
 
                 Connector::Or => {
-                    let output = exec(*cmd1, env);
+                    let output = exec(*cmd1, env, background);
                     if output != 0 {
-                        exec(*cmd2, env)
+                        exec(*cmd2, env, background)
                     } else {
                         output
                     }
                 }
 
                 Connector::Pipe => {
-                    io::_print(&String::from("| Not handled\n"));
-                    1
+                    let fd = syscall::open(String::from("/dev/fifo"), 0);
+                    if background {
+                        if syscall::fork() == 0 {
+                            syscall::dup2(io::STD_OUT, fd);
+                            syscall::exit(exec(*cmd1, env, true))
+                        } else {
+                            syscall::dup2(io::STD_IN, fd);
+                            syscall::exit(exec(*cmd2, env, true))
+                        }
+                    } else {
+                        let proc_1 = syscall::fork();
+                        if proc_1 == 0 {
+                            syscall::dup2(io::STD_OUT, fd);
+                            syscall::exit(exec(*cmd1, env, true))
+                        } else {
+                            match *cmd2 {
+                                Command::Nothing => 0,
+                                _ => {
+                                    let proc_2 = syscall::fork();
+                                    if proc_2 == 0 {
+                                        syscall::dup2(io::STD_IN, fd);
+                                        syscall::exit(exec(*cmd2, env, true))
+                                    } else {
+                                        wait_end(proc_1, proc_2)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -176,5 +258,21 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
             io::_print(&String::from("If nothing\n"));
             1
         } // Not implemented
+    }
+}
+
+
+unsafe fn wait_end(proc_1: usize, proc_2: usize) -> usize {
+    loop {
+        let (i1, i2) = syscall::listen_proc(proc_1);
+        if i1 == proc_1 {
+            return syscall::await_end(proc_2)
+        }
+
+        let (i1, i2) = syscall::listen_proc(proc_2);
+        if i1 == proc_2 {
+            return syscall::await_end(proc_1)
+        }
+
     }
 }

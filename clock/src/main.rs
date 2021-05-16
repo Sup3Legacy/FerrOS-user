@@ -14,7 +14,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         let fd = syscall::open(String::from("/hard/screen"), 0);
-        syscall::dup2(1, fd);
+        syscall::dup2(io::STD_OUT, fd);
         syscall::set_screen_size(1, 40);
         syscall::set_screen_pos(0, 20);
     }
@@ -24,9 +24,12 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
 #[inline(never)]
 fn main() {
     let clock_fd = unsafe { syscall::open(String::from("/hard/clock"), 0) };
+    unsafe {
+        syscall::dup2(io::STD_IN, clock_fd);
+    }
     loop {
         let mut base = String::from("\n");
-        base.push_str(&io::read_to_string(clock_fd, 256));
+        base.push_str(&io::read_to_string(io::STD_IN, 256));
         io::_print(&base);
         unsafe {
             syscall::sleep()

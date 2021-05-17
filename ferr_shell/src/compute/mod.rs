@@ -62,7 +62,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                 args.push(String::new())
                             }
 
-                            syscall::exec(name, &args);
+                            run(&name, &args);
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
@@ -79,8 +79,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                 } else {
                                     args.push(String::new())
                                 }
-    
-                                syscall::exec(name, &args);
+                                run(&name, &args);
                                 io::_print(&String::from("Program not found\n"));
                                 syscall::exit(1)
                             } else {
@@ -222,7 +221,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                 }
 
                 Connector::Pipe => {
-                    let fd = syscall::open(String::from("/dev/fifo"), 0);
+                    let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
                     if background {
                         if syscall::fork() == 0 {
                             syscall::dup2(io::STD_OUT, fd);
@@ -281,7 +280,7 @@ unsafe fn wait_end(proc_1: usize, proc_2: usize) -> usize {
 }
 
 unsafe fn run(path: &String, args: &Vec<String>) -> usize {
-    let fd = syscall::open(String::from(path), io::RD_TO_EXECUTE as u64);
+    let fd = syscall::open(path, io::OpenFlags::OXCUTE);
     if fd == usize::MAX {
         1
     } else {
@@ -291,9 +290,9 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
             Some(c) => {
                 if *c == 0x7f {
                     syscall::close(fd);
-                    syscall::exec(String::from(path), args)
+                    syscall::exec(path, args)
                 } else {
-                    io::_print(&String::from("Only ELF has been implemented"));
+                    io::_print(&String::from("Only ELF has been implemented\n"));
                     1
                 }
             }

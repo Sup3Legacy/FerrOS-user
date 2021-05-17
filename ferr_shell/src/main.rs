@@ -20,7 +20,7 @@ pub mod remove_variables;
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args_number: u64, _args: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
-        let fd = syscall::open(String::from("/hard/screen"), 0);
+        let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
         syscall::dup2(io::STD_OUT, fd);
         syscall::set_screen_size(24, 80);
         syscall::set_screen_pos(1, 0);

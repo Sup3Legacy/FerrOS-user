@@ -66,10 +66,13 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
+                            let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
                             let id = syscall::fork();
                             if id == 0 {
+                                syscall::dup2(io::STD_IN, fd);
+                                syscall::close(fd);
                                 let mut name = String::from(name);
-                                for c in prog_name.bytes().skip(1) {
+                                for c in prog_name.bytes().skip(2) {
                                     name.push(c as char);
                                 }
     
@@ -83,7 +86,28 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                 io::_print(&String::from("Program not found\n"));
                                 syscall::exit(1)
                             } else {
-                                syscall::await_end(id)
+                                let mut data: [u8; 512] = [0; 512];
+                                loop {
+                                    let size = syscall::read(io::STD_IN, &mut data as *mut u8, 512);
+                                    let mut kill = false;
+                                    for i in 0..size {
+                                        if data[i] == 12 {
+                                            kill = true;
+                                            io::_print(&String::from("Should kill user\n"));
+                                        }
+                                    }
+
+                                    syscall::write(fd, &data as *const u8, size);
+                                    syscall::sleep();
+                                    if kill {
+                                        syscall::close(fd);
+                                        for i in 0..5 {
+                                            syscall::sleep();
+                                        }
+                                        syscall::kill(id);
+                                        return syscall::await_end(id);
+                                    }
+                                }
                             }
                         }
                     } else {

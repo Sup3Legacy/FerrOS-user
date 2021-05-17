@@ -1,6 +1,6 @@
 [package]
 name = "ferr_shell"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Gabriel DORIATH DÖHLER <gabriel.doriath.dohler@ens.psl.eu>"]
 edition = "2018"
 

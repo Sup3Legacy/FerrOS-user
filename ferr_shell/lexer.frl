@@ -111,7 +111,7 @@ and word = parse
     }
   | [0-255] as c
       {
-        let mut s1 = String::from(c.chars().nth(1).unwrap());
+        let mut s1 = String::from(c.chars().nth(0).unwrap());
         match word(lexbuf) {
             Ok(parser::Token::WORD(s)) => s1.push_str(&s),
             _ => panic!("should not happen"),
@@ -120,8 +120,6 @@ and word = parse
       }
 
 and double_quote = parse
-  | eof
-      { panic!("Unclosed String") }
   | '\n'
     {
         lexbuf.newline();

@@ -5,12 +5,29 @@ use alloc::vec::Vec;
 
 use ferr_os_librust::{io, syscall};
 
-mod build_tree;
-mod lexer;
-use build_tree::command::{Command, Connector};
+//mod build_tree;
+pub mod lexer;
+//use build_tree::command::{Command, Connector};
+pub mod command;
+use command::{Command, Connector};
+pub mod parser;
 
 pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
-    match lexer::decompose(string) {
+    unsafe {
+        syscall::debug(0, 0);
+    }
+    let mut lexbuf = lexer::Lexbuf::new(string);
+    unsafe {
+        syscall::debug(0, 1);
+    }
+    match parser::inputunit(lexer::token, &mut lexbuf) {
+        Err(_) => io::_print(&String::from("parsing error\n")),
+        Ok(command) => {
+            unsafe { exec(command, env) };
+        },
+    }
+
+    /*match lexer::decompose(string) {
         Err(()) => io::_print(&String::from("Could not parse it\n")),
         Ok(vector) => match build_tree::build_tree(vector) {
             Err(()) => io::_print(&String::from("Could not parse formula\n")),
@@ -18,10 +35,10 @@ pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
                 unsafe { exec(command, env, false) };
             }
         },
-    }
+    }*/
 }
 
-unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background : bool) -> usize {
+unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
     match command {
         Command::Nothing => {
             0
@@ -49,9 +66,13 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                     && prog_name.as_bytes()[1] == b'/'
                 {
                     if let Some(name) = env.get("PWD") {
-                        if background {
+                        let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
+                        let id = syscall::fork();
+                        if id == 0 {
+                            syscall::dup2(io::STD_IN, fd);
+                            syscall::close(fd);
                             let mut name = String::from(name);
-                            for c in prog_name.bytes().skip(1) {
+                            for c in prog_name.bytes().skip(2) {
                                 name.push(c as char);
                             }
 
@@ -61,33 +82,11 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                             } else {
                                 args.push(String::new())
                             }
-
                             run(&name, &args);
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
-                            let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
-                            let id = syscall::fork();
-                            if id == 0 {
-                                syscall::dup2(io::STD_IN, fd);
-                                syscall::close(fd);
-                                let mut name = String::from(name);
-                                for c in prog_name.bytes().skip(2) {
-                                    name.push(c as char);
-                                }
-    
-                                let mut args = cmd.cmd_line;
-                                if let Some(name) = env.get("PWD") {
-                                    args.push(String::from(name))
-                                } else {
-                                    args.push(String::new())
-                                }
-                                run(&name, &args);
-                                io::_print(&String::from("Program not found\n"));
-                                syscall::exit(1)
-                            } else {
-                                await_end_and_kill(id, fd)
-                            }
+                            await_end_and_kill(id, fd)
                         }
                     } else {
                         io::_print(&String::from(
@@ -119,22 +118,22 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                         }
                         0
                     } else if cmd.cmd_line[0] == "exit" {
-                        if background {
-                            if cmd.cmd_line.len() >= 2 {
-                                let i = &cmd.cmd_line[1];
-                                if i == "0" {
-                                    syscall::exit(0)
-                                } else {
-                                    syscall::exit(1)
-                                }
-                            } else {
+                        if cmd.cmd_line.len() >= 2 {
+                            let i = &cmd.cmd_line[1];
+                            if i == "0" {
                                 syscall::exit(0)
+                            } else {
+                                syscall::exit(1)
                             }
                         } else {
-                            syscall::shutdown(0)
+                            syscall::exit(0)
                         }
                     } else if let Some(name_list_raw) = env.get("PATH") {
-                        if background {
+                        let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::OWR | io::OpenFlags::ORD);
+                        let id = syscall::fork();
+                        if id == 0 {
+                            syscall::dup2(io::STD_IN, fd);
+                            syscall::close(fd);
                             let mut name_list = String::from(name_list_raw);
                             for name_raw in name_list.split(":") {
                                 let mut name = String::from(name_raw);
@@ -160,38 +159,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
-                            let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::OWR | io::OpenFlags::ORD);
-                            let id = syscall::fork();
-                            if id == 0 {
-                                syscall::dup2(io::STD_IN, fd);
-                                syscall::close(fd);
-                                let mut name_list = String::from(name_list_raw);
-                                for name_raw in name_list.split(":") {
-                                    let mut name = String::from(name_raw);
-                                    if name.as_bytes()[name.len() - 1] != b'/' {
-                                        name.push('/');
-                                    }
-                                    for c in prog_name.bytes() {
-                                        name.push(c as char);
-                                    }
-
-                                    let mut args = Vec::new();
-                                    for a in cmd.cmd_line.iter() {
-                                        args.push(String::from(a))
-                                    }
-
-                                    if let Some(name) = env.get("PWD") {
-                                        args.push(String::from(name))
-                                    } else {
-                                        args.push(String::new())
-                                    }
-                                    run(&name, &args);
-                                }
-                                io::_print(&String::from("Program not found\n"));
-                                syscall::exit(1)
-                            } else {
-                                await_end_and_kill(id, fd)
-                            }
+                            await_end_and_kill(id, fd)
                         }
                     } else {
                         io::_print(&String::from("Variable PATH not defined\n"));
@@ -204,9 +172,9 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
         Command::Connection(cmd1, connect, cmd2) => {
             match connect {
                 Connector::Seq => {
-                    let output = exec(*cmd1, env, false);
+                    let output = exec(*cmd1, env);
                     if output == 0 {
-                        exec(*cmd2, env, false)
+                        exec(*cmd2, env)
                     } else {
                         output
                     }
@@ -218,9 +186,9 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                 },
 
                 Connector::Or => {
-                    let output = exec(*cmd1, env, background);
+                    let output = exec(*cmd1, env);
                     if output != 0 {
-                        exec(*cmd2, env, background)
+                        exec(*cmd2, env)
                     } else {
                         output
                     }
@@ -228,48 +196,46 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
 
                 Connector::Pipe => {
                     let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
-                    if background {
-                        if syscall::fork() == 0 {
-                            syscall::dup2(io::STD_OUT, fd);
-                            syscall::close(fd);
-                            syscall::exit(exec(*cmd1, env, true))
-                        } else {
+                    let fd2 = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
+                    let proc_1 = syscall::fork();
+                    if proc_1 == 0 {
+                        syscall::dup2(io::STD_OUT, fd);
+                        syscall::close(fd);
+                        syscall::dup2(io::STD_IN, fd2);
+                        syscall::close(fd2);
+                        syscall::exit(exec(*cmd1, env))
+                    } else {
+                        let proc_2 = syscall::fork();
+                        if proc_2 == 0 {
+                            syscall::close(fd2);
+
                             syscall::dup2(io::STD_IN, fd);
                             syscall::close(fd);
-                            syscall::exit(exec(*cmd2, env, true))
-                        }
-                    } else {
-                        let fd2 = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
-                        let proc_1 = syscall::fork();
-                        if proc_1 == 0 {
-                            syscall::dup2(io::STD_OUT, fd);
-                            syscall::close(fd);
-                            syscall::dup2(io::STD_IN, fd2);
-                            syscall::close(fd2);
-                            syscall::exit(exec(*cmd1, env, true))
+                            syscall::exit(exec(*cmd2, env))
                         } else {
-                            match *cmd2 {
-                                Command::Nothing => 0,
-                                _ => {
-                                    let proc_2 = syscall::fork();
-                                    if proc_2 == 0 {
-                                        syscall::dup2(io::STD_IN, fd);
-                                        syscall::close(fd);
-                                        syscall::exit(exec(*cmd2, env, true))
-                                    } else {
-                                        syscall::close(fd);
-                                        await_end2_and_kill(proc_1, proc_2, fd2)
-                                    }
-                                }
-                            }
+                            syscall::close(fd);
+                            await_end2_and_kill(proc_1, proc_2, fd2)
                         }
                     }
                 }
             }
         }
-        Command::If(_, _, _) => {
-            io::_print(&String::from("If nothing\n"));
-            1
+        Command::If(cmd_if, cmd_then, cmd_else) => {
+            let id = syscall::fork();
+            let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
+            if id == 0 {
+                syscall::dup2(io::STD_IN, fd);
+                syscall::close(fd);
+                let v = exec(*cmd_if, env);
+                syscall::exit(v)
+            } else {
+                let v = await_end_and_kill(id, fd);
+                if v == 0 {
+                    exec(*cmd_then, env)
+                } else {
+                    exec(*cmd_else, env)
+                }
+            }
         } // Not implemented
     }
 }

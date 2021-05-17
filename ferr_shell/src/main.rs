@@ -46,12 +46,13 @@ fn main() {
                 Err(()) => String::from("FerrSH >> "),
                 Ok(unfolded) => unfolded,
             };
-            let raw = get_input(&intro);
+            let mut raw = get_input(&intro);
             let mut printing = String::from("\r");
             printing.push_str(&intro);
             printing.push_str(&raw);
             printing.push_str(" \n");
             io::_print(&printing);
+            raw.push('\n');
             match remove_variables::main(&raw, env) {
                 Ok(unfolded) => {
                     compute::bash(unfolded, env);

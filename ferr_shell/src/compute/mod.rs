@@ -225,15 +225,18 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                     if background {
                         if syscall::fork() == 0 {
                             syscall::dup2(io::STD_OUT, fd);
+                            syscall::close(fd);
                             syscall::exit(exec(*cmd1, env, true))
                         } else {
                             syscall::dup2(io::STD_IN, fd);
+                            syscall::close(fd);
                             syscall::exit(exec(*cmd2, env, true))
                         }
                     } else {
                         let proc_1 = syscall::fork();
                         if proc_1 == 0 {
                             syscall::dup2(io::STD_OUT, fd);
+                            syscall::close(fd);
                             syscall::exit(exec(*cmd1, env, true))
                         } else {
                             match *cmd2 {
@@ -242,6 +245,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                     let proc_2 = syscall::fork();
                                     if proc_2 == 0 {
                                         syscall::dup2(io::STD_IN, fd);
+                                        syscall::close(fd);
                                         syscall::exit(exec(*cmd2, env, true))
                                     } else {
                                         syscall::close(fd);

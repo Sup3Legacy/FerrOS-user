@@ -53,7 +53,10 @@ fn main() {
             printing.push_str(" \n");
             io::_print(&printing);
             match remove_variables::main(&raw, env) {
-                Ok(unfolded) => compute::bash(unfolded, env),
+                Ok(unfolded) => {
+                    compute::bash(unfolded, env);
+                    io::_print(&String::from("\n"));
+                },
                 Err(()) => (),
             }
         } else {

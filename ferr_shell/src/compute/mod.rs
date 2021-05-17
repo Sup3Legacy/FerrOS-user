@@ -245,7 +245,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                             syscall::dup2(io::STD_OUT, fd);
                             syscall::close(fd);
                             syscall::dup2(io::STD_IN, fd2);
-                            syscall::close(fd);
+                            syscall::close(fd2);
                             syscall::exit(exec(*cmd1, env, true))
                         } else {
                             match *cmd2 {

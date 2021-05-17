@@ -24,10 +24,6 @@ fn main(args: Vec<String>) {
     unsafe {
         ferr_os_librust::syscall::debug(args[0].len(), args[1].len());
     }
-    if args.len() < 3 {
-        io::_print(&String::from("Didn't get any argument \n"));
-        return;
-    }
     match args.get(1) {
         None => print_loop(),
         Some(s_1) => unsafe { main_loop(s_1) },

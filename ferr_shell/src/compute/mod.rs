@@ -239,9 +239,12 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                             syscall::exit(exec(*cmd2, env, true))
                         }
                     } else {
+                        let fd2 = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
                         let proc_1 = syscall::fork();
                         if proc_1 == 0 {
                             syscall::dup2(io::STD_OUT, fd);
+                            syscall::close(fd);
+                            syscall::dup2(io::STD_IN, fd2);
                             syscall::close(fd);
                             syscall::exit(exec(*cmd1, env, true))
                         } else {
@@ -255,7 +258,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                         syscall::exit(exec(*cmd2, env, true))
                                     } else {
                                         syscall::close(fd);
-                                        wait_end(proc_1, proc_2)
+                                        await_end2_and_kill(proc_1, proc_2, fd2)
                                     }
                                 }
                             }
@@ -341,6 +344,58 @@ unsafe fn await_end_and_kill(id: usize, fd: usize) -> usize {
         let (id2, v) = syscall::listen_proc(id);
         if id2 == id {
             return v;
+        }
+    }
+}
+
+unsafe fn await_end2_and_kill(id1: usize, id2: usize, fd: usize) -> usize {
+    let mut data: [u8; 512] = [0; 512];
+    loop {
+        let size = syscall::read(io::STD_IN, &mut data as *mut u8, 512);
+        let mut kill = false;
+        for i in 0..size {
+            if data[i] == 12 {
+                kill = true;
+                io::_print(&String::from("Should kill user\n"));
+            }
+        }
+
+        syscall::write(fd, &data as *const u8, size);
+        syscall::sleep();
+        if kill {
+            syscall::close(fd);
+            for i in 0..5 {
+                syscall::sleep();
+            }
+            let (id1bis, v) = syscall::listen_proc(id1);
+            if id1bis == id1 {
+                let (id2bis, v) = syscall::listen_proc(id2);
+                if id2bis == id2 {
+                    return v;
+                } else {
+                    syscall::kill(id2);
+                    return syscall::await_end(id2);
+                }
+            } else {
+                syscall::kill(id1);
+                let (id2bis, v) = syscall::listen_proc(id2);
+                if id2bis == id2 {
+                    return syscall::await_end(id1);
+                } else {
+                    syscall::kill(id2);
+                    return wait_end(id1, id2);
+                }
+            }
+        }
+
+        let (id1bis, v) = syscall::listen_proc(id1);
+        if id1bis == id1 {
+            return await_end_and_kill(id2, fd);
+        }
+
+        let (id2bis, v) = syscall::listen_proc(id2);
+        if id2bis == id2 {
+            return await_end_and_kill(id1, fd);
         }
     }
 }

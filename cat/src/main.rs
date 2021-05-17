@@ -74,44 +74,15 @@ unsafe fn read_all(path: &String) -> Vec<u8> {
 
 fn print_dump(file: &Vec<u8>, cannonical: bool) {
     let len = file.len();
-    let mut address = 0_usize;
-    loop {
-        let mut partial = String::new();
-        let address_str = alloc::format!("{:08x}  ", address);
-        partial.push_str(&address_str);
-        for i in 0..16 {
-            if address + i >= len {
-                for _ in 0..(16 - i) {
-                    partial.push_str("   ");
-                }
-                break;
-            }
-            partial.push_str(&alloc::format!("{:02x} ", file[address + i]));
-        }
-        if cannonical {
-            partial.push_str("    |");
-            for i in 0..16 {
-                if address + i >= len {
-                    for _ in 0..(16 - i) {
-                        partial.push(' ');
-                    }
-                    break;
-                }
-                let character = file[address + i] as char;
-                if char::is_ascii(&character) {
-                    partial.push(character);
-                } else {
-                    partial.push('.');
-                }
-            }
-            partial.push('|');
-        }
-        partial.push('\n');
-        ferr_os_librust::io::_print(&partial);
-        address += 16;
-        if address >= len {
-            break;
+    let mut res = String::new();
+    for u in file.iter() {
+        let c = *u as char;
+        if c.is_ascii() {
+            res.push(c)
+        } else {
+            res.push(' ');
         }
     }
-    ferr_os_librust::io::_print(&String::from("\n"));
+    res.push('\n');
+    ferr_os_librust::io::_print(&res);
 }

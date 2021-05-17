@@ -23,14 +23,14 @@ fn main(args: Vec<String>) {
     }
     if args.len() < 3 {
         io::_print(&String::from("Didn't get any argument \n"));
-        return
+        return;
     }
     match args.get(1) {
         None => io::_print(&String::from("Needs at least one argument\n")),
         Some(s_1) => {
             let s;
             if s_1.len() == 0 {
-                return
+                return;
             } else if s_1.as_bytes()[0] == b'/' {
                 s = String::from(s_1);
             } else if s_1.len() > 2 && s_1.as_bytes()[0] == b'.' && s_1.as_bytes()[1] == b'/' {
@@ -77,11 +77,7 @@ fn print_dump(file: &Vec<u8>, cannonical: bool) {
     let mut res = String::new();
     for u in file.iter() {
         let c = *u as char;
-        if c.is_ascii() {
-            res.push(c)
-        } else {
-            res.push(' ');
-        }
+        res.push(c)
     }
     res.push('\n');
     ferr_os_librust::io::_print(&res);

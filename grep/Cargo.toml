@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 ferr_os_librust = {git = "https://github.com/Sup3Legacy/FerrOS-librust"}
+regex-automata = { version = "*", default-features = false }

@@ -152,7 +152,7 @@ fn token_0(lexbuf : &mut Lexbuf) -> Result<(),()> {
 	lexbuf.set_read(15);
 	if let Ok(chr) = lexbuf.next_char() {
 	if chr == 92 { token_13(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }
@@ -223,7 +223,7 @@ fn token_11(lexbuf : &mut Lexbuf) -> Result<(),()> {
 	lexbuf.set_read(46);
 	if let Ok(chr) = lexbuf.next_char() {
 	if chr == 92 { token_13(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }
@@ -231,7 +231,7 @@ fn token_12(lexbuf : &mut Lexbuf) -> Result<(),()> {
 	lexbuf.set_read(46);
 	if let Ok(chr) = lexbuf.next_char() {
 	if chr == 92 { token_13(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }
@@ -239,7 +239,7 @@ fn token_13(lexbuf : &mut Lexbuf) -> Result<(),()> {
 	lexbuf.set_read(46);
 	if let Ok(chr) = lexbuf.next_char() {
 	if chr == 92 { token_13(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }
@@ -247,7 +247,7 @@ fn token_14(lexbuf : &mut Lexbuf) -> Result<(),()> {
 	lexbuf.set_read(46);
 	if let Ok(chr) = lexbuf.next_char() {
 	if chr == 92 { token_13(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_14(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }
@@ -267,7 +267,7 @@ fn token_16(lexbuf : &mut Lexbuf) -> Result<(),()> { if let Ok(chr) = lexbuf.nex
 	if chr == 124 { token_9(lexbuf.incr_pos()) } else
 	if chr == 59 { token_10(lexbuf.incr_pos()) } else
 	if chr == 92 { token_11(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(36 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_12(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(36 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { token_12(lexbuf.incr_pos()) } else
 	if chr == 34 { token_15(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
@@ -351,7 +351,7 @@ fn word_4(lexbuf : &mut Lexbuf) -> Result<(),()> {
 fn word_5(lexbuf : &mut Lexbuf) -> Result<(),()> { if let Ok(chr) = lexbuf.next_char() {
 	if chr == 124||chr == 62||(59 <= chr && chr <= 60)||chr == 38||chr == 32||(9 <= chr && chr <= 10) { word_0(lexbuf.incr_pos()) } else
 	if chr == 34 { word_1(lexbuf.incr_pos()) } else
-	if (125 <= chr && chr <= 255)||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { word_3(lexbuf.incr_pos()) } else
+	if 125 <= chr||(93 <= chr && chr <= 123)||(63 <= chr && chr <= 91)||chr == 61||(39 <= chr && chr <= 58)||(35 <= chr && chr <= 37)||chr == 33||(11 <= chr && chr <= 31)||chr <= 8 { word_3(lexbuf.incr_pos()) } else
 	if chr == 92 { word_4(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
@@ -429,14 +429,14 @@ fn double_quote_2(lexbuf : &mut Lexbuf) -> Result<(),()> {
 fn double_quote_3(lexbuf : &mut Lexbuf) -> Result<(),()> { 
 	lexbuf.set_read(71);
 	if let Ok(chr) = lexbuf.next_char() {
-	if (93 <= chr && chr <= 255)||(35 <= chr && chr <= 91)||(11 <= chr && chr <= 33)||chr <= 9 { double_quote_3(lexbuf.incr_pos()) } else
+	if 93 <= chr||(35 <= chr && chr <= 91)||(11 <= chr && chr <= 33)||chr <= 9 { double_quote_3(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }
 fn double_quote_4(lexbuf : &mut Lexbuf) -> Result<(),()> { if let Ok(chr) = lexbuf.next_char() {
 	if chr == 10 { double_quote_0(lexbuf.incr_pos()) } else
 	if chr == 34 { double_quote_1(lexbuf.incr_pos()) } else
-	if (93 <= chr && chr <= 255)||(35 <= chr && chr <= 91)||(11 <= chr && chr <= 33)||chr <= 9 { double_quote_3(lexbuf.incr_pos()) } else
+	if 93 <= chr||(35 <= chr && chr <= 91)||(11 <= chr && chr <= 33)||chr <= 9 { double_quote_3(lexbuf.incr_pos()) } else
 	if chr == 92 { double_quote_5(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
@@ -479,7 +479,7 @@ fn comment_1(lexbuf : &mut Lexbuf) -> Result<(),()> {
 }
 fn comment_2(lexbuf : &mut Lexbuf) -> Result<(),()> { if let Ok(chr) = lexbuf.next_char() {
 	if chr == 10 { comment_0(lexbuf.incr_pos()) } else
-	if (11 <= chr && chr <= 255)||chr <= 9 { comment_1(lexbuf.incr_pos()) } else
+	if 11 <= chr||chr <= 9 { comment_1(lexbuf.incr_pos()) } else
 	{ Err(()) }
 	} else {Err(())}
 }

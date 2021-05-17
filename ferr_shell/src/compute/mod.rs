@@ -9,7 +9,7 @@ use ferr_os_librust::{io, syscall};
 pub mod lexer;
 //use build_tree::command::{Command, Connector};
 pub mod command;
-use command::{Command, Connector};
+use command::{Command, Connector, Redirect};
 pub mod parser;
 
 pub fn bash(string: String, env: &mut BTreeMap<String, String>) {
@@ -77,12 +77,15 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                             }
 
                             let mut args = cmd.cmd_line;
+                            let pwd;
                             if let Some(name) = env.get("PWD") {
-                                args.push(String::from(name))
+                                pwd = String::from(name);
                             } else {
-                                args.push(String::new())
+                                pwd = String::new();
                             }
-                            run(&name, &args);
+
+                            args.push(String::from(&pwd));
+                            run(&name, &args, &cmd.cmd_redirects, &pwd);
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
@@ -149,12 +152,14 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                                     args.push(String::from(a))
                                 }
 
+                                let pwd;
                                 if let Some(name) = env.get("PWD") {
-                                    args.push(String::from(name))
+                                    pwd = String::from(name);
                                 } else {
-                                    args.push(String::new())
+                                    pwd = String::new();
                                 }
-                                run(&name, &args);
+                                args.push(String::from(&pwd));
+                                run(&name, &args, &cmd.cmd_redirects, &pwd);
                             }
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
@@ -181,8 +186,23 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                 },
 
                 Connector::And => {
-                    io::_print(&String::from("& Not handled\n"));
-                    1
+                    let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
+                    let proc_1 = syscall::fork();
+                    if proc_1 == 0 {
+                        syscall::dup2(io::STD_IN, fd);
+                        syscall::close(fd);
+                        syscall::exit(exec(*cmd1, env))
+                    } else {
+                        let proc_2 = syscall::fork();
+                        if proc_2 == 0 {
+                            syscall::dup2(io::STD_IN, fd);
+                            syscall::close(fd);
+                            syscall::exit(exec(*cmd2, env))
+                        } else {
+                            syscall::close(fd);
+                            await_end2_and_kill(proc_1, proc_2, fd)
+                        }
+                    }
                 },
 
                 Connector::Or => {
@@ -258,23 +278,101 @@ unsafe fn wait_end(proc_1: usize, proc_2: usize) -> usize {
     }
 }
 
-unsafe fn run(path: &String, args: &Vec<String>) -> usize {
+unsafe fn run(path: &String, args: &Vec<String>, redirects: &Vec<Redirect>, pwd: &String) -> usize {
+    for r in redirects.iter() {
+        match r {
+            Redirect::Input(s) => {
+                if s.len() > 0 {
+                    let mut file;
+                    if s.as_bytes()[0] == b'/' {
+                        file = String::from(s);
+                    } else {
+                        if s.len() > 1 && s.as_bytes()[0] == b'.' && s.as_bytes()[1] == b'/' {
+                            file = String::from(pwd);
+                            for b in s.bytes().skip(2) {
+                                file.push(b as char);
+                            }
+                        } else {
+                            file = String::from(pwd);
+                            for b in s.bytes() {
+                                file.push(b as char);
+                            }
+                        }
+                    }
+                    let fd = syscall::open(&file, io::OpenFlags::ORD);
+                    syscall::dup2(io::STD_IN, fd);
+                    syscall::close(fd);
+                }
+            },
+            Redirect::Output(s) => {
+                if s.len() > 0 {
+                    let mut file;
+                    if s.as_bytes()[0] == b'/' {
+                        file = String::from(s);
+                    } else {
+                        if s.len() > 1 && s.as_bytes()[0] == b'.' && s.as_bytes()[1] == b'/' {
+                            file = String::from(pwd);
+                            for b in s.bytes().skip(2) {
+                                file.push(b as char);
+                            }
+                        } else {
+                            file = String::from(pwd);
+                            for b in s.bytes() {
+                                file.push(b as char);
+                            }
+                        }
+                    }
+                    let fd = syscall::open(&file, io::OpenFlags::OWR | io::OpenFlags::OCREAT);
+                    syscall::dup2(io::STD_OUT, fd);
+                    syscall::close(fd);
+                }
+            },
+            Redirect::OutputAppend(s) => {
+                if s.len() > 0 {
+                    let mut file;
+                    if s.as_bytes()[0] == b'/' {
+                        file = String::from(s);
+                    } else {
+                        if s.len() > 1 && s.as_bytes()[0] == b'.' && s.as_bytes()[1] == b'/' {
+                            file = String::from(pwd);
+                            for b in s.bytes().skip(2) {
+                                file.push(b as char);
+                            }
+                        } else {
+                            file = String::from(pwd);
+                            for b in s.bytes() {
+                                file.push(b as char);
+                            }
+                        }
+                    }
+                    let fd = syscall::open(&file, io::OpenFlags::OWR | io::OpenFlags::OAPPEND | io::OpenFlags::OCREAT);
+                    syscall::dup2(io::STD_OUT, fd);
+                    syscall::close(fd);
+                }
+            },
+        }
+    }
     let fd = syscall::open(path, io::OpenFlags::OXCUTE);
     if fd == usize::MAX {
         1
     } else {
-        let first_char = io::read_input(fd, 1);
-        match first_char.get(0) {
-            None => 1,
-            Some(c) => {
-                if *c == 0x7f {
-                    syscall::close(fd);
-                    syscall::exec(path, args)
+        let start = io::read_input(fd, 512);
+        if start.len() > 4 && &start[0..4] == "\x7FELF".as_bytes() {
+            syscall::close(fd);
+            syscall::exec(path, args)
+        } else if start.len() > 4 && &start[0..2] == "#!/".as_bytes() {
+            let mut name = String::from(start[2] as char);
+            for i in 3..start.len() {
+                if start[i] == b'\n' {
+                    break
                 } else {
-                    io::_print(&String::from("Only ELF has been implemented\n"));
-                    1
+                    name.push(start[i] as char);
                 }
             }
+            syscall::exec(&name, args)
+        } else {
+            io::_print(&String::from("Only ELF has been implemented\n"));
+            1
         }
     }
 }

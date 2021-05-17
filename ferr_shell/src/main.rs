@@ -17,7 +17,7 @@ pub mod compute;
 pub mod remove_variables;
 
 #[no_mangle]
-pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args_number: u64, _args: u64) {
+pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, args_number: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
@@ -31,7 +31,9 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args_number: u64, _
         env1.insert(String::from("PATH"), String::from("/usr/bin/"));
         ENV = Some(env1);
     }
-    main();
+    if args_number == 0 {
+        main()
+    }
 }
 
 #[inline(never)]

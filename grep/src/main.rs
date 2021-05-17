@@ -5,12 +5,9 @@
 use ferr_os_librust::io;
 
 extern crate alloc;
-extern crate regex_automata;
 
 use alloc::vec::Vec;
 use alloc::{format, string::String};
-
-use regex_automata::{Regex, DFA};
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
@@ -21,9 +18,6 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
 
 #[inline(never)]
 fn main(args: Vec<String>) {
-    unsafe {
-        ferr_os_librust::syscall::debug(args[0].len(), args[1].len());
-    }
     match args.get(1) {
         None => print_loop(),
         Some(s_1) => unsafe { main_loop(s_1) },
@@ -52,8 +46,10 @@ unsafe fn main_loop(pattern: &String) {
             if s.contains(pattern) {
                 let mut res = format!("{}: ", line);
                 res.push_str(s);
+                res.push('\n');
                 io::_print(&res);
             }
+            io::_print(&String::from("Lourd"));
             line += 1;
         }
     }

@@ -55,7 +55,7 @@ fn main(args: Vec<String>) {
 
 unsafe fn read_all(path: &String) -> Vec<u8> {
     let mut res = Vec::new();
-    let fd = ferr_os_librust::syscall::open(path.clone(), 0);
+    let fd = ferr_os_librust::syscall::open(&path.clone(), io::OpenFlags::ORD);
     loop {
         //ferr_os_librust::io::_print(&String::from("Reading...."));
         let partial = ferr_os_librust::io::read_input(fd, 128);
@@ -73,7 +73,6 @@ unsafe fn read_all(path: &String) -> Vec<u8> {
 }
 
 fn print_dump(file: &Vec<u8>, cannonical: bool) {
-    let len = file.len();
     let mut res = String::new();
     for u in file.iter() {
         let c = *u as char;

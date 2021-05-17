@@ -84,7 +84,7 @@ dependencies = [
 [[package]]
 name = "ferr_os_librust"
 version = "0.1.0"
-source = "git+https://github.com/Sup3Legacy/FerrOS-librust#0f1ce30eefc63d6c0e13945fc16195b0448e7566"
+source = "git+https://github.com/Sup3Legacy/FerrOS-librust#d08415b916b0cdce15c10866e63cafb428e2a6f0"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",

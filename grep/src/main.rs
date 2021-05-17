@@ -26,7 +26,8 @@ fn main(args: Vec<String>) {
 
 fn print_loop() {
     loop {
-        io::_print(&io::read_to_string(io::STD_IN, 512));
+        let res = io::read_to_string(io::STD_IN, 512);
+        io::_print(&res);
     }
 }
 
@@ -49,7 +50,6 @@ unsafe fn main_loop(pattern: &String) {
                 res.push('\n');
                 io::_print(&res);
             }
-            io::_print(&String::from("Lourd"));
             line += 1;
         }
     }

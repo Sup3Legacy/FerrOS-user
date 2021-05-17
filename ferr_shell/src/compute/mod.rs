@@ -86,28 +86,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                 io::_print(&String::from("Program not found\n"));
                                 syscall::exit(1)
                             } else {
-                                let mut data: [u8; 512] = [0; 512];
-                                loop {
-                                    let size = syscall::read(io::STD_IN, &mut data as *mut u8, 512);
-                                    let mut kill = false;
-                                    for i in 0..size {
-                                        if data[i] == 12 {
-                                            kill = true;
-                                            io::_print(&String::from("Should kill user\n"));
-                                        }
-                                    }
-
-                                    syscall::write(fd, &data as *const u8, size);
-                                    syscall::sleep();
-                                    if kill {
-                                        syscall::close(fd);
-                                        for i in 0..5 {
-                                            syscall::sleep();
-                                        }
-                                        syscall::kill(id);
-                                        return syscall::await_end(id);
-                                    }
-                                }
+                                await_end_and_kill(id, fd)
                             }
                         }
                     } else {
@@ -181,8 +160,11 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
                         } else {
+                            let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::OWR | io::OpenFlags::ORD);
                             let id = syscall::fork();
                             if id == 0 {
+                                syscall::dup2(io::STD_IN, fd);
+                                syscall::close(fd);
                                 let mut name_list = String::from(name_list_raw);
                                 for name_raw in name_list.split(":") {
                                     let mut name = String::from(name_raw);
@@ -208,7 +190,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>, background 
                                 io::_print(&String::from("Program not found\n"));
                                 syscall::exit(1)
                             } else {
-                                syscall::await_end(id)
+                                await_end_and_kill(id, fd)
                             }
                         }
                     } else {
@@ -324,6 +306,41 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
                     1
                 }
             }
+        }
+    }
+}
+
+unsafe fn await_end_and_kill(id: usize, fd: usize) -> usize {
+    let mut data: [u8; 512] = [0; 512];
+    loop {
+        let size = syscall::read(io::STD_IN, &mut data as *mut u8, 512);
+        let mut kill = false;
+        for i in 0..size {
+            if data[i] == 12 {
+                kill = true;
+                io::_print(&String::from("Should kill user\n"));
+            }
+        }
+
+        syscall::write(fd, &data as *const u8, size);
+        syscall::sleep();
+        if kill {
+            syscall::close(fd);
+            for i in 0..5 {
+                syscall::sleep();
+            }
+            let (id2, v) = syscall::listen_proc(id);
+            if id2 == id {
+                return v;
+            } else {
+                syscall::kill(id);
+                return syscall::await_end(id);
+            }
+        }
+
+        let (id2, v) = syscall::listen_proc(id);
+        if id2 == id {
+            return v;
         }
     }
 }

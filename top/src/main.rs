@@ -18,7 +18,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
 
 #[inline(never)]
 fn main(args: Vec<String>) {
-    let proc_fd = unsafe { syscall::open(&String::from("proc"), io::OpenFlags::ORD) };
+    let proc_fd = unsafe { syscall::open(&String::from("/proc"), io::OpenFlags::ORD) };
     let procs_str = io::read_to_string(proc_fd, 1024);
     let proc = procs_str
         .split_whitespace()
@@ -27,8 +27,9 @@ fn main(args: Vec<String>) {
         .filter(|x| !x.is_empty())
         .map(|s| s.parse::<u32>().unwrap())
         .collect::<Vec<u32>>();
-    io::_print(&String::from("ID   Heap-add  Heap (kiB)          State\n"));
+    io::_print(&String::from("ID PPID  Heap-add  Heap (kiB)           State                 name\n"));
     for id in proc {
+        let ppid = get_info(id, "ppid");
         let heap_base = get_info(id, "heap");
         let heap_total = heap_base
             .split_whitespace()
@@ -36,7 +37,8 @@ fn main(args: Vec<String>) {
         let heap_address = heap_total[0];
         let heap_size = heap_total[1];
         let state = get_info(id, "state");
-        io::_print(&format!("{:>2?} {:>10} {:>10} {:>15}\n", id, heap_address, heap_size, state));
+        let name = get_info(id, "name");
+        io::_print(&format!("{:>2?} {:>4} {:>10} {:>10} {:>15} {:>20}\n", id, ppid, heap_address, heap_size, state, name));
     }
 }
 

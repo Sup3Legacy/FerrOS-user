@@ -4,8 +4,8 @@ all: parser lexer
 	cp target/x86_64-ferros/release/ferr_shell ../../FerrOS/filesystem/ferr_shell
 
 
-parser: src/compute/parser.rs
+parser:
 	../../Samenhir/samenhir parser.sam -l rust -o src/compute/parser.rs
 
-lexer: src/compute/lexer.rs
+lexer:
 	../../Ferrolex/ferrolex lexer.frl -l rust -o src/compute/lexer.rs

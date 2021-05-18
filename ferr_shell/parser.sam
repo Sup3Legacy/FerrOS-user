@@ -20,7 +20,7 @@ enum SimpleCommandElement {
   EltRedi(command::Redirect),
 }
 
-enum my_unit {
+enum MyUnit {
   MyUnit
 }
 
@@ -194,18 +194,18 @@ list1<command::Command>:
     { pc }
 ;
 
-simple_list_terminator<my_unit>:
+simple_list_terminator<MyUnit>:
 | NEWLINE
-    { my_unit::MyUnit }
+    { MyUnit::MyUnit }
 | EOF
-    { my_unit::MyUnit }
+    { MyUnit::MyUnit }
 ;
 
-newline_list<my_unit>:
+newline_list<MyUnit>:
   | /* empty */
-    { my_unit::MyUnit }
+    { MyUnit::MyUnit }
   | newline_list NEWLINE
-    { my_unit::MyUnit }
+    { MyUnit::MyUnit }
 ;
 
 simple_list<command::Command>:

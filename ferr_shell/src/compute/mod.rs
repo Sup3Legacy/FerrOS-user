@@ -297,17 +297,18 @@ unsafe fn do_redirects(redirects: &Vec<Redirect>, pwd: &String) {
             Redirect::Input(s) => {
                 file_name = s;
                 fd_target = io::STD_IN;
-                rights = io::OpenFlags::OWR;
+                rights = io::OpenFlags::ORD;
             },
             Redirect::Output(s) => {
                 file_name = s;
                 fd_target = io::STD_OUT;
-                rights = io::OpenFlags::ORD | io::OpenFlags::OCREAT;
+                rights = io::OpenFlags::OWR | io::OpenFlags::OCREAT;
             },
             Redirect::OutputAppend(s) => {
                 file_name = s;
                 fd_target = io::STD_OUT;
-                rights = io::OpenFlags::ORD | io::OpenFlags::OCREAT | io::OpenFlags::OAPPEND;
+                rights = io::OpenFlags::OWR | io::OpenFlags::OCREAT | io::OpenFlags::OAPPEND;
+                syscall::debug(0, 2);
             }
         };
         if file_name.len() > 0 {

@@ -27,11 +27,16 @@ fn main(args: Vec<String>) {
         .filter(|x| !x.is_empty())
         .map(|s| s.parse::<u32>().unwrap())
         .collect::<Vec<u32>>();
-    io::_print(&String::from(" ID Heap-add Heap-size  State"));
+    io::_print(&String::from("ID   Heap-add  Heap (kiB)          State\n"));
     for id in proc {
-        let heap = get_info(id, "heap");
+        let heap_base = get_info(id, "heap");
+        let heap_total = heap_base
+            .split_whitespace()
+            .collect::<Vec<&str>>();
+        let heap_address = heap_total[0];
+        let heap_size = heap_total[1];
         let state = get_info(id, "state");
-        io::_print(&format!("{:>2?} {:10} {:10}", id, heap, state));
+        io::_print(&format!("{:>2?} {:>10} {:>10} {:>15}\n", id, heap_address, heap_size, state));
     }
 }
 

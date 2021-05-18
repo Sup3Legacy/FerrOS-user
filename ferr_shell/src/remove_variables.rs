@@ -54,16 +54,7 @@ fn parse_var(
             let mut name = String::new();
             for c in string.bytes().skip(pos + 1) {
                 if c == b')' {
-                    match env.get(&name) {
-                        None => {
-                            let mut s2 = String::from("Var ");
-                            s2.push_str(&name);
-                            s2.push_str(" is not defined\n");
-                            io::_print(&s2);
-                            return Err(());
-                        }
-                        Some(value) => return Ok((pos + 2 + name.len(), String::from(value))),
-                    }
+                    return Ok((pos + 2 + name.len(), get_var(&name, env)));
                 } else {
                     name.push(c as char)
                 }
@@ -72,15 +63,14 @@ fn parse_var(
         }
     } else {
         let s = String::from(string.as_bytes()[pos] as char);
-        match env.get(&s) {
-            None => {
-                let mut s2 = String::from("Var ");
-                s2.push_str(&s);
-                s2.push_str(" is not defined\n");
-                io::_print(&s2);
-                Err(())
-            }
-            Some(v) => Ok((pos + 1, String::from(v))),
-        }
+        Ok((pos+1, get_var(&s, env)))
+    }
+}
+
+
+fn get_var(name: &String, env: &BTreeMap<String, String>) -> String {
+    match env.get(name) {
+        None => String::from(""),
+        Some(v) => String::from(v),
     }
 }

@@ -9,7 +9,7 @@ use ferr_os_librust::{io, syscall};
 
 extern crate alloc;
 use alloc::collections::BTreeMap;
-use alloc::string::String;
+use alloc::{fmt::format, string::String};
 
 static mut ENV: Option<BTreeMap<String, String>> = None;
 
@@ -17,7 +17,7 @@ pub mod compute;
 pub mod remove_variables;
 
 #[no_mangle]
-pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, args_number: u64) {
+pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
         let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
@@ -29,8 +29,16 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, args_num
         env1.insert(String::from("PWD"), String::from("/"));
         env1.insert(String::from("PRINT"), String::from("$(SHELL):$(PWD) >> "));
         env1.insert(String::from("PATH"), String::from("/usr/bin/"));
+
+        let arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
+        for (ind, v) in arguments.iter().enumerate() {
+            let str = alloc::format!("{}", ind);
+            env1.insert(str, String::from(v));
+        }
         ENV = Some(env1);
     }
+
+
     if args_number == 0 {
         main()
     }

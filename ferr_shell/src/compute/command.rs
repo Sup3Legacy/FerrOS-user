@@ -30,10 +30,9 @@ pub enum Command {
 
 
 impl Command {
-    pub fn make_async(mut self) -> Self {
+    pub fn make_async(self) -> Self {
         match self {
-            Command::SimpleCommand(mut scmd) => {
-                scmd.cmd_bg = true;
+            Command::SimpleCommand(scmd) => {
                 Command::SimpleCommand(SimpleCommand {
                     cmd_bg: true,
                     ..scmd

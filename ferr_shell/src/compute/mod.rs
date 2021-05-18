@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -137,7 +136,7 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                         if id == 0 {
                             syscall::dup2(io::STD_IN, fd);
                             syscall::close(fd);
-                            let mut name_list = String::from(name_list_raw);
+                            let name_list = String::from(name_list_raw);
                             for name_raw in name_list.split(":") {
                                 let mut name = String::from(name_raw);
                                 if name.as_bytes()[name.len() - 1] != b'/' {
@@ -263,12 +262,12 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
 
 unsafe fn wait_end(proc_1: usize, proc_2: usize) -> usize {
     loop {
-        let (i1, i2) = syscall::listen_proc(proc_1);
+        let (i1, _) = syscall::listen_proc(proc_1);
         if i1 == proc_1 {
             return syscall::await_end(proc_2)
         }
 
-        let (i1, i2) = syscall::listen_proc(proc_2);
+        let (i1, _) = syscall::listen_proc(proc_2);
         if i1 == proc_2 {
             return syscall::await_end(proc_1)
         }
@@ -428,10 +427,10 @@ unsafe fn await_end2_and_kill(id1: usize, id2: usize, fd: usize) -> usize {
         syscall::sleep();
         if kill {
             syscall::close(fd);
-            for i in 0..5 {
+            for _ in 0..5 {
                 syscall::sleep();
             }
-            let (id1bis, v) = syscall::listen_proc(id1);
+            let (id1bis, _) = syscall::listen_proc(id1);
             if id1bis == id1 {
                 let (id2bis, v) = syscall::listen_proc(id2);
                 if id2bis == id2 {
@@ -442,7 +441,7 @@ unsafe fn await_end2_and_kill(id1: usize, id2: usize, fd: usize) -> usize {
                 }
             } else {
                 syscall::kill(id1);
-                let (id2bis, v) = syscall::listen_proc(id2);
+                let (id2bis, _) = syscall::listen_proc(id2);
                 if id2bis == id2 {
                     return syscall::await_end(id1);
                 } else {
@@ -452,12 +451,12 @@ unsafe fn await_end2_and_kill(id1: usize, id2: usize, fd: usize) -> usize {
             }
         }
 
-        let (id1bis, v) = syscall::listen_proc(id1);
+        let (id1bis, _) = syscall::listen_proc(id1);
         if id1bis == id1 {
             return await_end_and_kill(id2, fd);
         }
 
-        let (id2bis, v) = syscall::listen_proc(id2);
+        let (id2bis, _) = syscall::listen_proc(id2);
         if id2bis == id2 {
             return await_end_and_kill(id1, fd);
         }

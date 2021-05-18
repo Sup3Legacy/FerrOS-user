@@ -406,6 +406,7 @@ unsafe fn await_end_and_kill(id: usize, fd: usize) -> usize {
 
         let (id2, v) = syscall::listen_proc(id);
         if id2 == id {
+            syscall::close(fd);
             return v;
         }
     }

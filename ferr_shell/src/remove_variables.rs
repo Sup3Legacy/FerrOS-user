@@ -69,8 +69,17 @@ fn parse_var(
 
 
 fn get_var(name: &String, env: &BTreeMap<String, String>) -> String {
-    match env.get(name) {
-        None => String::from(""),
-        Some(v) => String::from(v),
+    if name == "?" {
+        let (id, v) = unsafe { ferr_os_librust::syscall::listen() };
+        if id == 0 {
+            return String::new()
+        } else {
+            return alloc::format!("{}", v);
+        }
+    } else {
+        match env.get(name) {
+            None => String::from(""),
+            Some(v) => String::from(v),
+        }
     }
 }

@@ -39,7 +39,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
     }
 
 
-    if args_number == 0 {
+    if args_number == 1 {
         main()
     }
 }

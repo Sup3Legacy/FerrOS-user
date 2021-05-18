@@ -9,7 +9,7 @@ use ferr_os_librust::{io, syscall};
 
 extern crate alloc;
 use alloc::collections::BTreeMap;
-use alloc::{fmt::format, string::String};
+use alloc::string::String;
 
 static mut ENV: Option<BTreeMap<String, String>> = None;
 
@@ -27,7 +27,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
         let mut env1 = BTreeMap::new();
         env1.insert(String::from("SHELL"), String::from("FerrSH"));
         env1.insert(String::from("PWD"), String::from("/"));
-        env1.insert(String::from("PRINT"), String::from("$(SHELL):$(PWD) >> "));
+        env1.insert(String::from("PS1"), String::from("$(SHELL):$(PWD) >> "));
         env1.insert(String::from("PATH"), String::from("/usr/bin/"));
 
         let arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
@@ -48,7 +48,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
 fn main() {
     loop {
         if let Some(env) = unsafe { &mut ENV } {
-            let v1 = match env.get("PRINT") {
+            let v1 = match env.get("PS1") {
                 None => "FerrSH >> ",
                 Some(v) => v,
             };
@@ -84,7 +84,7 @@ fn get_input(intro: &String) -> String {
         let v = io::read_input(io::STD_IN, 512);
         let previous_size = begin.len() + end.len();
         keyboard::translate(v, &mut begin, &mut end);
-        for i in previous_size..(1 + begin.len() + end.len()) {
+        for _ in previous_size..(1 + begin.len() + end.len()) {
             io::_print(&String::from(" "));
         }
         for i in 0..begin.len() {

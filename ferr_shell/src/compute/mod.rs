@@ -392,7 +392,7 @@ unsafe fn await_end_and_kill(id: usize, fd: usize) -> usize {
         syscall::sleep();
         if kill {
             syscall::close(fd);
-            for i in 0..5 {
+            for _ in 0..5 {
                 syscall::sleep();
             }
             let (id2, v) = syscall::listen_proc(id);

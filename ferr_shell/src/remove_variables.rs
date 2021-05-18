@@ -6,7 +6,7 @@ use ferr_os_librust::io;
 pub fn main(string: &String, env: &BTreeMap<String, String>) -> Result<String, ()> {
     let mut pos = 0;
     let mut out = String::new();
-    while (pos < string.len()) {
+    while pos < string.len() {
         match string.as_bytes()[pos] {
             b'$' => match parse_var(string, pos + 1, env) {
                 Err(()) => return Err(()),

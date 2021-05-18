@@ -130,17 +130,8 @@ and double_quote = parse
         }
         Ok(parser::Token::WORD(s1))
     }
-  | '\"' as t1
+  | '\"'
       { Ok(parser::Token::WORD(String::new())) }
-  | '"' as t2
-    {
-        let mut s1 = String::from("\"");
-        match double_quote(lexbuf) {
-            Ok(parser::Token::WORD(s)) => s1.push_str(&s),
-            _ => panic!("should not happen"),
-        }
-        Ok(parser::Token::WORD(s1))
-    }
   | '\\' [0-255] as c
       {
         let mut s1 = String::from(c.chars().nth(1).unwrap());

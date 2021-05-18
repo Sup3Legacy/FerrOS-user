@@ -64,37 +64,38 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                     && prog_name.as_bytes()[0] == b'.'
                     && prog_name.as_bytes()[1] == b'/'
                 {
-                    if let Some(name) = env.get("PWD") {
-                        let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
-                        let id = syscall::fork();
-                        if id == 0 {
-                            syscall::dup2(io::STD_IN, fd);
-                            syscall::close(fd);
-                            let mut name = String::from(name);
-                            for c in prog_name.bytes().skip(2) {
-                                name.push(c as char);
-                            }
-
-                            let mut args = cmd.cmd_line;
-                            let pwd;
-                            if let Some(name) = env.get("PWD") {
-                                pwd = String::from(name);
-                            } else {
-                                pwd = String::new();
-                            }
-
-                            args.push(String::from(&pwd));
-                            run(&name, &args, &cmd.cmd_redirects, &pwd);
-                            io::_print(&String::from("Program not found\n"));
-                            syscall::exit(1)
-                        } else {
-                            await_end_and_kill(id, fd)
-                        }
+                    let mut pwd;
+                    match env.get("PWD") {
+                        Some(n) => pwd = String::from(n),
+                        None => pwd = String::new(),
+                    }
+                    let id;
+                    let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
+                    if cmd.cmd_bg {
+                        id = 0;
                     } else {
-                        io::_print(&String::from(
-                            "Variable PWD not defined (should not happen)\n",
-                        ));
-                        1
+                        id = syscall::fork();
+                    }
+                    if id == 0 {
+                        if !cmd.cmd_bg {
+                            syscall::dup2(io::STD_IN, fd);
+                        }
+                        syscall::close(fd);
+                        do_redirects(&cmd.cmd_redirects, &pwd);
+
+                        let mut name = String::from(&pwd);
+                        for c in prog_name.bytes().skip(2) {
+                            name.push(c as char);
+                        }
+                        
+                        let mut args = cmd.cmd_line;
+                        args.push(String::from(&pwd));
+
+                        run(&name, &args);
+                        io::_print(&String::from("Program not found\n"));
+                        syscall::exit(1)
+                    } else {
+                        await_end_and_kill(id, fd)
                     }
                 } else {
                     if cmd.cmd_line[0] == "cd" {
@@ -132,10 +133,26 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                         }
                     } else if let Some(name_list_raw) = env.get("PATH") {
                         let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::OWR | io::OpenFlags::ORD);
-                        let id = syscall::fork();
+                        let id;
+                        if cmd.cmd_bg {
+                            id = 0
+                        } else {
+                            id = syscall::fork()
+                        };
+
                         if id == 0 {
-                            syscall::dup2(io::STD_IN, fd);
+                            if !cmd.cmd_bg {
+                                syscall::dup2(io::STD_IN, fd);
+                            }
                             syscall::close(fd);
+                            let pwd;
+                            if let Some(name) = env.get("PWD") {
+                                pwd = String::from(name);
+                            } else {
+                                pwd = String::new();
+                            }
+                            do_redirects(&cmd.cmd_redirects, &pwd);
+
                             let name_list = String::from(name_list_raw);
                             for name_raw in name_list.split(":") {
                                 let mut name = String::from(name_raw);
@@ -151,14 +168,8 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                                     args.push(String::from(a))
                                 }
 
-                                let pwd;
-                                if let Some(name) = env.get("PWD") {
-                                    pwd = String::from(name);
-                                } else {
-                                    pwd = String::new();
-                                }
                                 args.push(String::from(&pwd));
-                                run(&name, &args, &cmd.cmd_redirects, &pwd);
+                                run(&name, &args);
                             }
                             io::_print(&String::from("Program not found\n"));
                             syscall::exit(1)
@@ -277,80 +288,55 @@ unsafe fn wait_end(proc_1: usize, proc_2: usize) -> usize {
     }
 }
 
-unsafe fn run(path: &String, args: &Vec<String>, redirects: &Vec<Redirect>, pwd: &String) -> usize {
+unsafe fn do_redirects(redirects: &Vec<Redirect>, pwd: &String) {
     for r in redirects.iter() {
+        let file_name;
+        let fd_target;
+        let rights;
         match r {
             Redirect::Input(s) => {
-                if s.len() > 0 {
-                    let mut file;
-                    if s.as_bytes()[0] == b'/' {
-                        file = String::from(s);
-                    } else {
-                        if s.len() > 1 && s.as_bytes()[0] == b'.' && s.as_bytes()[1] == b'/' {
-                            file = String::from(pwd);
-                            for b in s.bytes().skip(2) {
-                                file.push(b as char);
-                            }
-                        } else {
-                            file = String::from(pwd);
-                            for b in s.bytes() {
-                                file.push(b as char);
-                            }
-                        }
-                    }
-                    let fd = syscall::open(&file, io::OpenFlags::ORD);
-                    syscall::dup2(io::STD_IN, fd);
-                    syscall::close(fd);
-                }
+                file_name = s;
+                fd_target = io::STD_IN;
+                rights = io::OpenFlags::OWR;
             },
             Redirect::Output(s) => {
-                if s.len() > 0 {
-                    let mut file;
-                    if s.as_bytes()[0] == b'/' {
-                        file = String::from(s);
-                    } else {
-                        if s.len() > 1 && s.as_bytes()[0] == b'.' && s.as_bytes()[1] == b'/' {
-                            file = String::from(pwd);
-                            for b in s.bytes().skip(2) {
-                                file.push(b as char);
-                            }
-                        } else {
-                            file = String::from(pwd);
-                            for b in s.bytes() {
-                                file.push(b as char);
-                            }
-                        }
-                    }
-                    let fd = syscall::open(&file, io::OpenFlags::OWR | io::OpenFlags::OCREAT);
-                    syscall::dup2(io::STD_OUT, fd);
-                    syscall::close(fd);
-                }
+                file_name = s;
+                fd_target = io::STD_OUT;
+                rights = io::OpenFlags::ORD | io::OpenFlags::OCREAT;
             },
             Redirect::OutputAppend(s) => {
-                if s.len() > 0 {
-                    let mut file;
-                    if s.as_bytes()[0] == b'/' {
-                        file = String::from(s);
-                    } else {
-                        if s.len() > 1 && s.as_bytes()[0] == b'.' && s.as_bytes()[1] == b'/' {
-                            file = String::from(pwd);
-                            for b in s.bytes().skip(2) {
-                                file.push(b as char);
-                            }
-                        } else {
-                            file = String::from(pwd);
-                            for b in s.bytes() {
-                                file.push(b as char);
-                            }
-                        }
+                file_name = s;
+                fd_target = io::STD_OUT;
+                rights = io::OpenFlags::ORD | io::OpenFlags::OCREAT | io::OpenFlags::OAPPEND;
+            }
+        };
+        if file_name.len() > 0 {
+            let mut file;
+            if file_name.as_bytes()[0] == b'/' {
+                file = String::from(file_name);
+            } else {
+                if file_name.len() > 1 && &file_name.as_bytes()[0..1] == "./".as_bytes() {
+                    file = String::from(pwd);
+                    for b in file_name.bytes().skip(2) {
+                        file.push(b as char);
                     }
-                    let fd = syscall::open(&file, io::OpenFlags::OWR | io::OpenFlags::OAPPEND | io::OpenFlags::OCREAT);
-                    syscall::dup2(io::STD_OUT, fd);
-                    syscall::close(fd);
+                } else {
+                    file = String::from(pwd);
+                    for b in file_name.bytes() {
+                        file.push(b as char);
+                    }
                 }
-            },
+            }
+            let fd = syscall::open(&file, rights);
+            syscall::dup2(fd_target, fd);
+            syscall::close(fd);
+        } else {
+            syscall::exit(1);
         }
-    }
+    } 
+}
+
+unsafe fn run(path: &String, args: &Vec<String>) -> usize {
     let fd = syscall::open(path, io::OpenFlags::OXCUTE);
     if fd == usize::MAX {
         1

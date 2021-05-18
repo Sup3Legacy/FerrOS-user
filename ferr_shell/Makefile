@@ -5,8 +5,7 @@ all: parser lexer
 
 
 parser: src/compute/parser.rs
-	../../Samenhir/samenhir parser.sam -l rust
-	mv parser.rs src/compute/parser.rs
+	../../Samenhir/samenhir parser.sam -l rust -o src/compute/parser.rs
 
 lexer: src/compute/lexer.rs
 	../../Ferrolex/ferrolex lexer.frl -l rust -o src/compute/lexer.rs

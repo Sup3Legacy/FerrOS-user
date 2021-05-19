@@ -16,6 +16,6 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
         if id == 0 {
             syscall::exec(&String::from("/usr/clock"), &Vec::from([String::from("clock")]));
         }
-        syscall::exec(&String::from("/usr/bin/snake"), &Vec::from([String::from("snake")]));
+        syscall::exec(&String::from("/usr/ferr_shell"), &Vec::from([String::from("ferr_shell")]));
     }
 }

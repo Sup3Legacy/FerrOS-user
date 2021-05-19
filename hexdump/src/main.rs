@@ -139,7 +139,7 @@ fn print_dump(file: &Vec<u8>, cannonical: bool) {
                     break;
                 }
                 let character = file[address + i] as char;
-                if char::is_ascii(&character) {
+                if char::is_ascii_alphanumeric(&character) {
                     partial.push(character);
                 } else {
                     partial.push('.');

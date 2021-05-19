@@ -6,8 +6,8 @@ use ferr_os_librust::{io, syscall};
 
 extern crate alloc;
 
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use alloc::{fmt::format, string::String};
 
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
@@ -23,25 +23,25 @@ fn main(args: Vec<String>) {
     }
     if args.len() < 3 {
         io::_print(&String::from("Didn't get any argument \n"));
-        return
+        return;
     }
     let mut name = None;
     let mut pos = 1;
     let mut length = usize::MAX;
     let mut canonical = false;
     while pos < args.len() - 1 {
-        if args[pos].len() == 0 {
+        if args[pos].is_empty() {
             pos += 1;
         } else if args[pos].as_bytes()[0] == b'-' {
             if args[pos] == "-n" {
-                match str::parse(&args[pos+1]) {
+                match str::parse(&args[pos + 1]) {
                     Ok(n) => length = n,
                     Err(_) => {
                         io::_print(&String::from("-n awaits a integer\n"));
                         unsafe {
                             syscall::exit(3);
                         }
-                    },
+                    }
                 }
                 pos += 2;
             } else if args[pos] == "-C" {
@@ -71,11 +71,11 @@ fn main(args: Vec<String>) {
             unsafe {
                 syscall::exit(3);
             }
-        },
+        }
         Some(s_1) => {
             let s;
-            if s_1.len() == 0 {
-                return
+            if s_1.is_empty() {
+                return;
             } else if s_1.as_bytes()[0] == b'/' {
                 s = String::from(s_1);
             } else if s_1.len() > 2 && s_1.as_bytes()[0] == b'.' && s_1.as_bytes()[1] == b'/' {
@@ -94,17 +94,17 @@ fn main(args: Vec<String>) {
     }
 }
 
-unsafe fn read_all(path: &String, length: usize) -> Vec<u8> {
+unsafe fn read_all(path: &str, length: usize) -> Vec<u8> {
     let mut res = Vec::new();
-    let fd = ferr_os_librust::syscall::open(&path.clone(), io::OpenFlags::ORD);
+    let fd = ferr_os_librust::syscall::open(&path.to_string(), io::OpenFlags::ORD);
     loop {
         //ferr_os_librust::io::_print(&String::from("Reading...."));
         let partial = ferr_os_librust::io::read_input(fd, core::cmp::min(512, length - res.len()));
         let len = partial.len();
-        for i in 0..core::cmp::min(len, length - res.len()) {
-            res.push(partial[i]);
+        for elt in partial.iter().take(core::cmp::min(len, length - res.len())) {
+            res.push(*elt);
         }
-        
+
         if len == 0 {
             break;
         }
@@ -113,7 +113,7 @@ unsafe fn read_all(path: &String, length: usize) -> Vec<u8> {
     res
 }
 
-fn print_dump(file: &Vec<u8>, cannonical: bool) {
+fn print_dump(file: &[u8], cannonical: bool) {
     let len = file.len();
     let mut address = 0_usize;
     loop {

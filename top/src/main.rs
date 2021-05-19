@@ -12,12 +12,12 @@ use alloc::{format, string::String};
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
-    let arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
-    main(arguments);
+    let _arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
+    main();
 }
 
 #[inline(never)]
-fn main(args: Vec<String>) {
+fn main() {
     let proc_fd = unsafe { syscall::open(&String::from("/proc"), io::OpenFlags::ORD) };
     let procs_str = io::read_to_string(proc_fd, 1024);
     let proc = procs_str

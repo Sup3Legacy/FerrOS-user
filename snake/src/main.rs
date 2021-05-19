@@ -182,21 +182,21 @@ impl Game {
         let (head_x,head_y) = self.snake.get_head_pos();
         let new_head = match &self.snake.direction {
             Dir::Left => {
-                if head_x == &0_u16 {
+                if head_x <= &0_u16 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
                     (head_x-1, head_y+0)
                 }
             },
             Dir::Right => {
-                if *head_x == WIDTH-1 {
+                if *head_x >= WIDTH-1 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
                     (head_x+1, head_y+0)
                 }
             },
             Dir::Up => {
-                if *head_y == HEIGHT-1 {
+                if *head_y >= HEIGHT-1 {
                     return Err(SnakeError::OutOfBounds)
                 }
                 else {
@@ -204,7 +204,7 @@ impl Game {
                 }
             },
             Dir::Down => {
-                if head_y == &0_u16 {
+                if head_y <= &0_u16 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
                     (head_x+0, head_y+1)
@@ -267,8 +267,12 @@ impl Game {
 #[inline(never)]
 fn main() {
     unsafe {
+        let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
+        syscall::dup2(io::STD_OUT, fd);
+        syscall::close(fd);
         syscall::set_screen_size(HEIGHT as usize,WIDTH as usize);
         syscall::set_screen_pos(1,0);
+        syscall::set_layer(0);
     }
     let mut game = Game::init(); 
     game.display();
@@ -315,5 +319,6 @@ fn main_loop(g:&mut Game) -> u16 {
 
 fn end_screen() {
     io::_print(&String::from("You lost"));
+    loop {}
 }
 

@@ -16,32 +16,6 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
     main(arguments);
 }
 
-/*
-#[inline(never)]
-fn main(_args: Vec<String>) {
-    io::_print(&String::from("\x1B[91m                    
-               .#   ### ### ###   #               
-           ##, #################(### (##          
-           ############################/          \x1B[0mOS    : FerrOS\x1B[91m
-        ########(###############(##########       \x1B[0mKernel: 0.0.0\x1B[91m
-     #########################################    \x1B[0mShell : ferr_shell\x1B[91m
-      ##########################(############     \x1B[0mUptime: 42 hours\x1B[91m
-   ################\x1B[0m@@  \x1B[91m######\x1B[0m@@  \x1B[91m###############  \x1B[0mMemory: full\x1B[91m
-  ,#####(#######(#\x1B[0m@@@@\x1B[91m  (####\x1B[0m@@@\x1B[91m  ######(#######( \x1B[0mMoto: Better than A0!\x1B[91m
- #################\x1B[0m@@@\x1B[91m   #####\x1B[0m@@\x1B[91m   ################
- #####%%%%######################(########%%%%#####
-  ##### %%%###.%%%%#%%%%%%%%%%%%%%%% *####%%##### 
-    ####  %  ###(########   ####(#####(  %  ###   
-      (##      ########### ##########       ##    
-                #####  \x1B[0m@@   @\x1B[91m  #(###              \x1B[0m
-                 @@      @  @@@                   
-                 @@      @      @                 
-                   @@@@@    @@@@                  
-                                                  
-NOTE: If the memory is full just download some more.\n\n"))
-}
-*/
-
 // Macros are evaluated at compile time.
 // So it is faster than a loop.
 // This macro is needed to bypass the buffer limit.
@@ -56,6 +30,7 @@ macro_rules! print_lines {
     };
 }
 
+/* Without colors.
 #[inline(never)]
 fn main(_args: Vec<String>) {
     print_lines!(
@@ -67,7 +42,7 @@ fn main(_args: Vec<String>) {
         "     #########################################      | Shell : ferr_shell"
         "      ##########################(############       | Uptime: 42 hours"
         "   ################@@  ######@@  ###############    | Memory: full"
-        "  ,#####(#######(#@@@@  (####@@@  ######(#######(   | Moto: Better than A0!"
+        "  ,#####(#######(#@@@@  (####@@@  ######(#######(   | Moto  : Better than A0!"
         " #################@@@   #####@@   ################  "
         " #####%%%%######################(########%%%%#####  "
         "  ##### %%%###.%%%%#%%%%%%%%%%%%%%%% *####%%#####   "
@@ -77,6 +52,35 @@ fn main(_args: Vec<String>) {
         "                 @@      @  @@@                     "
         "                 @@      @      @                   "
         "                   @@@@@    @@@@                    "
+        ""
+        "NOTE: If the memory is full just download some more."
+        ""
+    );
+}
+*/
+
+// With colors!
+#[inline(never)]
+fn main(_args: Vec<String>) {
+    print_lines!(
+        "\x1B[\x05m"
+        "\x1B[\x05m               .#   ### ### ###   #               "
+        "\x1B[\x05m           ##, #################(### (##          "
+        "\x1B[\x05m           ############################/          \x1B[\x10m  | OS    : FerrOS\x1B[\x05m"
+        "\x1B[\x05m        ########(###############(##########       \x1B[\x10m  | Kernel: 0.0.0\x1B[\x05m"
+        "\x1B[\x05m     #########################################    \x1B[\x10m  | Shell : ferr_shell\x1B[\x05m"
+        "\x1B[\x05m      ##########################(############     \x1B[\x10m  | Uptime: 42 hours\x1B[\x05m"
+        "\x1B[\x05m   ################\x1B[\x10m@@  \x1B[\x05m######\x1B[\x10m@@  \x1B[\x05m###############  \x1B[\x10m  | Memory: full\x1B[\x05m"
+        "\x1B[\x05m  ,#####(#######(#\x1B[\x10m@@@@\x1B[\x05m  (####\x1B[\x10m@@@\x1B[\x05m  ######(#######( \x1B[\x10m  | Moto  : Better than A0!\x1B[\x05m"
+        "\x1B[\x05m #################\x1B[\x10m@@@\x1B[\x05m   #####\x1B[\x10m@@\x1B[\x05m   ################"
+        "\x1B[\x05m #####%%%%######################(########%%%%#####"
+        "\x1B[\x05m  ##### %%%###.%%%%#%%%%%%%%%%%%%%%% *####%%##### "
+        "\x1B[\x05m    ####  %  ###(########   ####(#####(  %  ###   "
+        "\x1B[\x05m      (##      ########### ##########       ##    "
+        "\x1B[\x05m                #####  \x1B[\x10m@@   @\x1B[\x05m  #(###              \x1B[\x10m"
+        "                 @@      @  @@@                   "
+        "                 @@      @      @                 "
+        "                   @@@@@    @@@@                  "
         ""
         "NOTE: If the memory is full just download some more."
         ""

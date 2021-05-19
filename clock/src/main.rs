@@ -13,7 +13,7 @@ use alloc::string::String;
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
     unsafe {
-        let fd = syscall::open(String::from("/hard/screen"), 0);
+        let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
         syscall::dup2(io::STD_OUT, fd);
         syscall::set_screen_size(1, 40);
         syscall::set_screen_pos(0, 20);
@@ -23,7 +23,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64) {
 
 #[inline(never)]
 fn main() {
-    let clock_fd = unsafe { syscall::open(String::from("/hard/clock"), 0) };
+    let clock_fd = unsafe { syscall::open(&String::from("/hard/clock"), io::OpenFlags::ORD) };
     unsafe {
         syscall::dup2(io::STD_IN, clock_fd);
     }

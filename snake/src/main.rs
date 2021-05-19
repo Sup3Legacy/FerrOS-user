@@ -8,9 +8,7 @@ use ferr_os_librust::{io,
 extern crate alloc;
 extern crate rand;
 
-use alloc::{collections::vec_deque::VecDeque,
-            format
-            };
+use alloc::collections::vec_deque::VecDeque;
 use alloc::string::String;
 use rand::{distributions::{Distribution, Uniform},
            rngs::SmallRng,
@@ -22,12 +20,12 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, _args_nu
     ferr_os_librust::allocator::init(heap_address, heap_size);
     main();
 }
-
-const WIDTH: u8 = 80;
-const HEIGHT: u8 = 20;
+//80*20
+const WIDTH: u16 = 80;
+const HEIGHT: u16 = 20;
 const SIZE : usize = WIDTH as usize * HEIGHT as usize;
 
-#[derive(Clone,Copy)]
+#[derive(Clone,Copy, PartialEq, Eq)]
 enum Dir {
     Left,
     Up,
@@ -40,7 +38,7 @@ enum SnakeError {
     EatSelf,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum State {
     Empty,
     Head(Dir),
@@ -67,27 +65,27 @@ enum Action {
 }
 
 struct Snake {
-    body: VecDeque<(u8,u8)>,
+    body: VecDeque<(u16,u16)>,
     fruited: bool,
     direction: Dir,
 }
 
 struct PointGenerator {
     rng: SmallRng,
-    distr_x: Uniform<u8>,
-    distr_y: Uniform<u8>,
+    distr_x: Uniform<u16>,
+    distr_y: Uniform<u16>,
 }
 
 struct Game {
     snake: Snake,
-    fruit: (u8,u8),
+    fruit: (u16,u16),
     score: u16,
     ended: bool,
     rng: PointGenerator,
     buffer: [State; SIZE],
 }
 
-fn buffer_to_line(buffer:[State; SIZE], y: u8) -> String {
+fn buffer_to_line(buffer:[State; SIZE], y: u16) -> String {
     let beg = y as usize * WIDTH as usize;
     let end = (y+1) as usize * WIDTH as usize;
     let line = &buffer[beg..end];
@@ -100,7 +98,7 @@ fn buffer_to_line(buffer:[State; SIZE], y: u8) -> String {
 }
 
 impl Snake {    
-    pub fn init(origin: (u8,u8), direction:Dir, length:u8) -> Self {
+    pub fn init(origin: (u16,u16), direction:Dir, length:u16) -> Self {
         let mut body = VecDeque::new();
         let mut current_pos = origin;
         for _ in 0..length {
@@ -126,7 +124,7 @@ impl Snake {
             direction: direction
         }
     }
-    pub fn get_head_pos(&self) -> &(u8,u8) {
+    pub fn get_head_pos(&self) -> &(u16,u16) {
         self.body.front().unwrap()
     }
 }
@@ -134,15 +132,15 @@ impl PointGenerator {
     pub fn init() -> Self {
         Self{
             rng: SmallRng::seed_from_u64(0),
-            distr_x: Uniform::new(0_u8, WIDTH), 
-            distr_y: Uniform::new(0_u8, HEIGHT),
+            distr_x: Uniform::new(0_u16, WIDTH), 
+            distr_y: Uniform::new(0_u16, HEIGHT),
         }
     }
-    pub fn new_point(&mut self) -> (u8,u8) {
+    pub fn new_point(&mut self) -> (u16,u16) {
         (self.distr_x.sample(&mut self.rng),
          self.distr_y.sample(&mut self.rng))
     }
-    pub fn generate_fruit(&mut self, snake: &Snake) -> (u8,u8) {
+    pub fn generate_fruit(&mut self, snake: &Snake) -> (u16,u16) {
         let fruit = self.new_point();
         if snake.body.contains(&fruit) {
             self.generate_fruit(snake)
@@ -155,7 +153,7 @@ impl PointGenerator {
 }
 impl Game {
     pub fn init() -> Self {
-        let snake = Snake::init((WIDTH/2,HEIGHT/2), Dir::Right, 3);
+        let snake = Snake::init((WIDTH/2,HEIGHT/2), Dir::Right, 4);
         let mut rng = PointGenerator::init();
         let fruit = rng.generate_fruit(&snake);
         let mut buffer = [State::Empty; SIZE as usize];
@@ -176,7 +174,7 @@ impl Game {
         }
     }
     
-    fn generate_fruit(&mut self) -> (u8,u8) {
+    fn generate_fruit(&mut self) -> (u16,u16) {
         self.rng.generate_fruit(&self.snake)
     }
     
@@ -184,7 +182,7 @@ impl Game {
         let (head_x,head_y) = self.snake.get_head_pos();
         let new_head = match &self.snake.direction {
             Dir::Left => {
-                if head_x == &0_u8 {
+                if head_x == &0_u16 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
                     (head_x-1, head_y+0)
@@ -206,21 +204,22 @@ impl Game {
                 }
             },
             Dir::Down => {
-                if head_y == &0_u8 {
+                if head_y == &0_u16 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
                     (head_x+0, head_y+1)
                 }
             }
         };
-        self.buffer[(new_head.1*HEIGHT +
+        self.buffer[(new_head.1*WIDTH +
                     new_head.0) as usize] = State::Head(self.snake.direction);
-        if !self.snake.fruited {
-            let tail = self.snake.body.pop_back().unwrap();
-            self.buffer[(tail.1*HEIGHT + tail.0) as usize] = State::Empty;
-        }
+        self.buffer[(head_y*WIDTH + head_x) as usize] = State::Snake;
         self.snake.body.push_front(new_head);
         self.snake.fruited = self.check_eat()?;
+        if !self.snake.fruited {
+            let tail = self.snake.body.pop_back().unwrap();
+            self.buffer[(tail.1*WIDTH + tail.0) as usize] = State::Empty;
+        }
         Ok(())
     }
 
@@ -232,7 +231,7 @@ impl Game {
 
     fn check_eat(&self) -> Result<bool, SnakeError>{
         let head = self.snake.get_head_pos();
-        if self.snake.body.contains(head) {
+        if self.buffer[(head.1*WIDTH + head.0) as usize] == State::Snake {
             Err(SnakeError::EatSelf)
         } else {
             Ok(head == &self.fruit)
@@ -250,10 +249,10 @@ impl Game {
     }
     
     pub fn display(&self) {
+        io::_print(&String::from("\n"));
         for y in 0..HEIGHT {
             io::_print(&buffer_to_line(self.buffer,y));
         }
-        unsafe{ syscall::debug(999,0_usize) };
     }
         
     pub fn do_action(&mut self, a: Action) {
@@ -267,10 +266,14 @@ impl Game {
 
 #[inline(never)]
 fn main() {
+    unsafe {
+        syscall::set_screen_size(HEIGHT as usize,WIDTH as usize);
+        syscall::set_screen_pos(1,0);
+    }
     let mut game = Game::init(); 
+    game.display();
     let score = main_loop(&mut game);
-    unsafe{ syscall::debug(666,0) };
-    print_score();
+    end_screen();
 }
 
 fn get_inputs() -> String {
@@ -291,30 +294,26 @@ fn char_to_action(c:char) -> Action {
     }
 }
 
+fn sleep(n: usize) {
+    for _ in 0..n {
+        unsafe { syscall::sleep() }
+    }
+}
 
 fn main_loop(g:&mut Game) -> u16 {
-    let mut i = 0_usize;
+    const n: usize = 10;
     while !g.ended {
-        unsafe{ syscall::debug(111,i) };
-        unsafe { syscall::debug(222, g.snake.get_head_pos().0 as usize) };
-        let inp = get_inputs();
-        let mut iter = inp.chars();
-        let next = iter.next();
-        for c in iter {
+        sleep(200);
+        for c in get_inputs().chars() {
             g.do_action(char_to_action(c));
         }
         g.update();
-        for _ in 0..1000 {
-            ();
-        }
         g.display();
-        unsafe{ syscall::debug(222,i) };
-        i+=1;
     }
     g.score
 }
 
-fn print_score() -> () {
-    ();
+fn end_screen() {
+    io::_print(&String::from("You lost"));
 }
 

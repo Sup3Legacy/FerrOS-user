@@ -10,7 +10,8 @@ extern crate rand;
 
 use alloc::{collections::vec_deque::VecDeque,
             string::String,
-            format
+            format,
+            vec::Vec
             };
 use rand::{distributions::{Distribution, Uniform},
            rngs::SmallRng,
@@ -19,9 +20,10 @@ use rand::{distributions::{Distribution, Uniform},
             };
 
 #[no_mangle]
-pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, _args_number: u64) {
+pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
-    main();
+    let arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
+    main(arguments);
 }
 //80*20
 const WIDTH: u16 = 59;
@@ -276,9 +278,11 @@ fn get_point(_g: &mut Game) {
 }
 
 fn annoying(g: &mut Game) {
-    let pitch = ((g.rng.rng.next_u64()) % 4)*50+ 50;
-    if g.rng.rng.next_u64() %4 < 2 {
-        unsafe{io::push_sound(SOUND_FD, pitch, 2, 0)}
+    if unsafe {!MUTE} {
+        let pitch = ((g.rng.rng.next_u64()) % 4)*50+ 50;
+        if g.rng.rng.next_u64() %4 < 2 {
+            unsafe{io::push_sound(SOUND_FD, pitch, 2, 0)}
+        }
     }
 }
 
@@ -290,9 +294,27 @@ fn loose(_g: &mut Game) {
 }
 
 static mut SOUND_FD : u64 = 0_u64;
+static mut MUTE: bool = false;
+
 
 #[inline(never)]
-fn main() {
+fn main(args: Vec<String>) {
+    if args.len() > 3 {
+        io::_print(&String::from("Got too many arguments, try -h for help\n"));
+        return;
+    } else if args.len() == 3 {
+        if &args[1] == "-h" {
+            io::_print(&String::from("-S Mute background music\n"));
+            io::_print(&String::from("-h Show this\n"));
+            return;
+        } else if &args[1] == "-S" {
+            unsafe { MUTE = true };
+        } else {
+            io::_print(&String::from("Incorrect argument, try -h for help\n"));
+            return;
+        }
+    }
+    
     unsafe {
         let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
         syscall::set_layer(10);

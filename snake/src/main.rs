@@ -8,10 +8,13 @@ use ferr_os_librust::{io,
 extern crate alloc;
 extern crate rand;
 
-use alloc::collections::vec_deque::VecDeque;
-use alloc::string::String;
+use alloc::{collections::vec_deque::VecDeque,
+            string::String,
+            format
+            };
 use rand::{distributions::{Distribution, Uniform},
            rngs::SmallRng,
+           RngCore,
            SeedableRng
             };
 
@@ -21,7 +24,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, _args_nu
     main();
 }
 //80*20
-const WIDTH: u16 = 60;
+const WIDTH: u16 = 59;
 const HEIGHT: u16 = 20;
 const SIZE : usize = WIDTH as usize * HEIGHT as usize;
 
@@ -46,6 +49,7 @@ enum State {
     Fruit
 }
 impl State {
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(self) -> String {
         String::from(match self {
             Self::Empty => ".",
@@ -246,7 +250,7 @@ impl Game {
             self.fruit = self.generate_fruit();
             self.buffer[(self.fruit.1*WIDTH + self.fruit.0) as usize] = State::Fruit;
             self.score += 1;
-            get_point();
+            get_point(self);
         }
     }
     
@@ -266,16 +270,19 @@ impl Game {
     }
 }
 
-fn get_point() {
+fn get_point(_g: &mut Game) {
     unsafe{ io::push_sound(SOUND_FD, 350, 2, 0);
     io::push_sound(SOUND_FD, 500, 2, 2)};
 }
 
-fn annoying() {
-    unsafe{io::push_sound(SOUND_FD, 250, 2, 0)};
+fn annoying(g: &mut Game) {
+    let pitch = ((g.rng.rng.next_u64()) % 4)*50+ 50;
+    if g.rng.rng.next_u64() %4 < 2 {
+        unsafe{io::push_sound(SOUND_FD, pitch, 2, 0)}
+    }
 }
 
-fn loose() {
+fn loose(_g: &mut Game) {
     unsafe{io::push_sound(SOUND_FD, 500, 3, 0)};
     unsafe{io::push_sound(SOUND_FD, 400, 3, 3)};
     unsafe{io::push_sound(SOUND_FD, 300, 3, 6)};
@@ -288,7 +295,7 @@ static mut SOUND_FD : u64 = 0_u64;
 fn main() {
     unsafe {
         let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
-        syscall::set_layer(0);
+        syscall::set_layer(10);
         syscall::dup2(io::STD_OUT, fd);
         syscall::close(fd);
         syscall::set_screen_size((HEIGHT+2) as usize,WIDTH as usize);
@@ -297,8 +304,8 @@ fn main() {
     }
     let mut game = Game::init(); 
     game.display();
-    let score = main_loop(&mut game);
-    end_screen();
+    main_loop(&mut game);
+    end_screen(&mut game);
 }
 
 fn get_inputs() -> String {
@@ -325,23 +332,30 @@ fn sleep(n: usize) {
     }
 }
 
-fn main_loop(g:&mut Game) -> u16 {
+fn main_loop(g:&mut Game) {
     while !g.ended {
-        sleep(350);
+        sleep(75);
         for c in get_inputs().chars() {
             g.do_action(char_to_action(c));
         }
         g.update();
-        //annoying();
+        annoying(g);
         g.display();
     }
-    g.score
 }
 
-#[allow(clippy::empty_loop)]
-fn end_screen() {
-    loose();
-    io::_print(&String::from("You lost"));
-    loop {}
+fn end_screen(g: &mut Game) {
+    loose(g);
+    for _ in 0..HEIGHT{
+        io::_print(&String::from("\n"));
+    }
+    io::_print(&String::from(
+        "     ----------==========GAME OVER==========----------     \n"));
+    io::_print(&format!("Collected {} fruit",g.score));
+    loop {
+        if !get_inputs().is_empty(){
+            return
+        }
+    }
 }
 

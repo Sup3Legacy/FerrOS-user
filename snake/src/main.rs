@@ -244,7 +244,8 @@ impl Game {
         }
         if self.snake.fruited {
             self.fruit = self.generate_fruit();
-            self.score += 1
+            self.score += 1;
+            get_point();
         }
     }
     
@@ -263,6 +264,16 @@ impl Game {
     }
 }
 
+fn get_point() {
+    unsafe{ io::push_sound(SOUND_FD, 350, 2, 0);
+    io::push_sound(SOUND_FD, 500, 2, 2)};
+}
+
+fn annoying() {
+    unsafe{io::push_sound(SOUND_FD, 250, 2, 0)};
+}
+
+static mut SOUND_FD : u64 = 0_u64;
 
 #[inline(never)]
 fn main() {
@@ -273,6 +284,8 @@ fn main() {
         syscall::set_screen_size(HEIGHT as usize,WIDTH as usize);
         syscall::set_screen_pos(1,0);
         syscall::set_layer(0);
+        SOUND_FD = syscall::open(&String::from("/hard/sound"), io::OpenFlags::OWR) as u64;
+        
     }
     let mut game = Game::init(); 
     game.display();
@@ -307,11 +320,12 @@ fn sleep(n: usize) {
 fn main_loop(g:&mut Game) -> u16 {
     const n: usize = 10;
     while !g.ended {
-        sleep(200);
+        sleep(300);
         for c in get_inputs().chars() {
             g.do_action(char_to_action(c));
         }
         g.update();
+        annoying();
         g.display();
     }
     g.score

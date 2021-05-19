@@ -18,9 +18,6 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
 
 #[inline(never)]
 fn main(args: Vec<String>) {
-    unsafe {
-        ferr_os_librust::syscall::debug(args[0].len(), args[1].len());
-    }
     if args.len() < 3 {
         io::_print(&String::from("Didn't get any argument \n"));
         return;

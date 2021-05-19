@@ -64,6 +64,7 @@ enum Action {
     Turn(Dir)
 }
 
+#[derive(Clone)]
 struct Snake {
     body: VecDeque<(u16,u16)>,
     fruited: bool,
@@ -230,11 +231,12 @@ impl Game {
     }
 
     fn check_eat(&self) -> Result<bool, SnakeError>{
-        let head = self.snake.get_head_pos();
-        if self.buffer[(head.1*WIDTH + head.0) as usize] == State::Snake {
+        let mut copy = self.snake.body.clone();
+        let head = copy.pop_front().unwrap();
+        if copy.contains(&head) {
             Err(SnakeError::EatSelf)
         } else {
-            Ok(head == &self.fruit)
+            Ok(head == self.fruit)
         }
     }
         
@@ -242,6 +244,7 @@ impl Game {
         self.ended = self.displace().is_err();
         if self.snake.fruited {
             self.fruit = self.generate_fruit();
+            self.buffer[(self.fruit.1*WIDTH + self.fruit.0) as usize] = State::Fruit;
             self.score += 1;
             get_point();
         }

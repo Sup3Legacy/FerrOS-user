@@ -46,16 +46,16 @@ enum State {
     Fruit
 }
 impl State {
-    pub fn to_char(self) -> char {
-        match self {
-            Self::Empty => '.',
-            Self::Head(Dir::Left) => '<',
-            Self::Head(Dir::Up) => '^',
-            Self::Head(Dir::Down) => 'v',
-            Self::Head(Dir::Right) => '>',
-            Self::Snake => 'O',
-            Self::Fruit => '@'
-        }
+    pub fn to_string(self) -> String {
+        String::from(match self {
+            Self::Empty => ".",
+            Self::Head(Dir::Left) => "\x1B[\x04m<\x1B[\x10m",
+            Self::Head(Dir::Up) => "\x1B[\x04m^\x1B[\x10m",
+            Self::Head(Dir::Down) => "\x1B[\x04mv\x1B[\x10m",
+            Self::Head(Dir::Right) => "\x1B[\x04m>\x1B[\x10m",
+            Self::Snake => "\x1B[\x03m0\x1B[\x10m",
+            Self::Fruit => "\x1B[\x05m@\x1B[\x10m"
+        })
     }
 }
 
@@ -92,7 +92,7 @@ fn buffer_to_line(buffer:[State; SIZE], y: u16) -> String {
     let line = &buffer[beg..end];
     let mut res = String::new();
     for pixel in line {
-        res.push(pixel.to_char());
+        res.push_str(&pixel.to_string()[..]);
     }
     res.push('\n');
     res
@@ -332,7 +332,7 @@ fn main_loop(g:&mut Game) -> u16 {
             g.do_action(char_to_action(c));
         }
         g.update();
-        annoying();
+        //annoying();
         g.display();
     }
     g.score

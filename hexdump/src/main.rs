@@ -2,7 +2,7 @@
 #![feature(start)]
 #![no_main]
 
-use ferr_os_librust::io;
+use ferr_os_librust::{io, syscall};
 
 extern crate alloc;
 
@@ -25,8 +25,53 @@ fn main(args: Vec<String>) {
         io::_print(&String::from("Didn't get any argument \n"));
         return
     }
-    match args.get(1) {
-        None => io::_print(&String::from("Needs at least one argument\n")),
+    let mut name = None;
+    let mut pos = 1;
+    let mut length = usize::MAX;
+    let mut canonical = false;
+    while pos < args.len() - 1 {
+        if args[pos].len() == 0 {
+            pos += 1;
+        } else if args[pos].as_bytes()[0] == b'-' {
+            if args[pos] == "-n" {
+                match str::parse(&args[pos+1]) {
+                    Ok(n) => length = n,
+                    Err(_) => {
+                        io::_print(&String::from("-n awaits a integer\n"));
+                        unsafe {
+                            syscall::exit(3);
+                        }
+                    },
+                }
+                pos += 2;
+            } else if args[pos] == "-C" {
+                pos += 1;
+                canonical = true;
+            } else {
+                io::_print(&String::from("Unknown flag\n"));
+                unsafe {
+                    syscall::exit(3);
+                }
+            }
+        } else {
+            if name.is_none() {
+                name = Some(&args[pos]);
+            } else {
+                io::_print(&String::from("Only one file can be given\n"));
+                unsafe {
+                    syscall::exit(3);
+                }
+            }
+            pos += 1
+        }
+    }
+    match name {
+        None => {
+            io::_print(&String::from("Needs at least one argument\n"));
+            unsafe {
+                syscall::exit(3);
+            }
+        },
         Some(s_1) => {
             let s;
             if s_1.len() == 0 {
@@ -43,28 +88,24 @@ fn main(args: Vec<String>) {
                 s = pwd;
             };
 
-            let file = unsafe { read_all(&s) };
-            if let Some(c) = args.get(2) {
-                print_dump(&file, &c[..] == "-C");
-            } else {
-                print_dump(&file, false);
-            }
+            let file = unsafe { read_all(&s, length) };
+            print_dump(&file, canonical);
         }
     }
 }
 
-unsafe fn read_all(path: &String) -> Vec<u8> {
+unsafe fn read_all(path: &String, length: usize) -> Vec<u8> {
     let mut res = Vec::new();
-    let fd = ferr_os_librust::syscall::open(path.clone(), 0);
+    let fd = ferr_os_librust::syscall::open(&path.clone(), io::OpenFlags::ORD);
     loop {
         //ferr_os_librust::io::_print(&String::from("Reading...."));
-        let partial = ferr_os_librust::io::read_input(fd, 128);
+        let partial = ferr_os_librust::io::read_input(fd, core::cmp::min(512, length - res.len()));
         let len = partial.len();
-        ferr_os_librust::syscall::debug(12, len);
-        for e in partial {
-            res.push(e);
+        for i in 0..core::cmp::min(len, length - res.len()) {
+            res.push(partial[i]);
         }
-        if len < 128 {
+        
+        if len == 0 {
             break;
         }
     }

@@ -34,7 +34,7 @@ impl Command {
         match self {
             Command::SimpleCommand(scmd) => {
                 Command::SimpleCommand(SimpleCommand {
-                    cmd_bg: true,
+                    cmd_bg: false, //true,
                     ..scmd
                 })
             }

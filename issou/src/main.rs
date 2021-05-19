@@ -4,16 +4,11 @@
 #![no_main]
 
 use core::panic::PanicInfo;
-use x86_64::instructions::port::Port;
 
 #[no_mangle]
 pub extern "C" fn _start() {
     syscall(0, 0, 0);
     main();
-}
-
-fn init() {
-    unsafe { asm!("push rax", "mov rax, 2", "int 80h", "pop rax") }
 }
 
 #[panic_handler]
@@ -24,6 +19,7 @@ pub fn panic(_: &PanicInfo) -> ! {
 }
 
 #[inline(never)]
+#[allow(clippy::empty_loop)]
 fn main() {
     syscall(0, 0, 0);
     syscall(0, 0, 0);

@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 ferr_os_librust = { git = "https://github.com/Sup3Legacy/FerrOS-librust" }
-x86_64="*"
 
 [profile.dev]
 panic = "abort"

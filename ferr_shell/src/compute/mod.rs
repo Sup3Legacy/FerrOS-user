@@ -343,7 +343,9 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
         1
     } else {
         let start = io::read_input(fd, 512);
-        if start.len() > 4 && &start[0..4] == "\x7FELF".as_bytes() {
+        if start.len() == 0 {
+            1
+        } else if start.len() > 4 && &start[0..4] == "\x7FELF".as_bytes() {
             syscall::close(fd);
             syscall::exec(path, args)
         } else if start.len() > 4 && &start[0..2] == "#!/".as_bytes() {

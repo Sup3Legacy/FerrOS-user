@@ -196,7 +196,7 @@ impl Game {
                 }
             },
             Dir::Up => {
-                if head_y >= HEIGHT-1 {
+                if head_y == 0 {
                     return Err(SnakeError::OutOfBounds)
                 }
                 else {
@@ -204,7 +204,7 @@ impl Game {
                 }
             },
             Dir::Down => {
-                if head_y == 0_u16 {
+                if head_y >= HEIGHT - 1 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
                     (head_x, head_y+1)
@@ -226,7 +226,7 @@ impl Game {
     fn turn(&mut self, dir:Dir) {
         self.snake.direction = dir;
         let head = self.snake.get_head_pos();
-        self.buffer[(head.1*HEIGHT + head.0) as usize] = State::Head(dir);
+        self.buffer[(head.1*WIDTH + head.0) as usize] = State::Head(dir);
     }
 
     fn check_eat(&self) -> Result<bool, SnakeError>{
@@ -252,6 +252,7 @@ impl Game {
         for y in 0..HEIGHT {
             io::_print(&buffer_to_line(self.buffer,y));
         }
+        io::_print(&String::from("\n"));
     }
         
     pub fn do_action(&mut self, a: Action) {
@@ -271,19 +272,25 @@ fn annoying() {
     unsafe{io::push_sound(SOUND_FD, 250, 2, 0)};
 }
 
+fn loose() {
+    unsafe{io::push_sound(SOUND_FD, 500, 3, 0)};
+    unsafe{io::push_sound(SOUND_FD, 400, 3, 3)};
+    unsafe{io::push_sound(SOUND_FD, 300, 3, 6)};
+    unsafe{io::push_sound(SOUND_FD, 200, 8, 9)};
+}
+
 static mut SOUND_FD : u64 = 0_u64;
 
 #[inline(never)]
 fn main() {
     unsafe {
         let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
+        syscall::set_layer(0);
         syscall::dup2(io::STD_OUT, fd);
         syscall::close(fd);
-        syscall::set_screen_size(HEIGHT as usize,WIDTH as usize);
+        syscall::set_screen_size((HEIGHT+2) as usize,WIDTH as usize);
         syscall::set_screen_pos(1,0);
-        syscall::set_layer(0);
         SOUND_FD = syscall::open(&String::from("/hard/sound"), io::OpenFlags::OWR) as u64;
-        
     }
     let mut game = Game::init(); 
     game.display();
@@ -317,7 +324,7 @@ fn sleep(n: usize) {
 
 fn main_loop(g:&mut Game) -> u16 {
     while !g.ended {
-        sleep(300);
+        sleep(350);
         for c in get_inputs().chars() {
             g.do_action(char_to_action(c));
         }
@@ -330,6 +337,7 @@ fn main_loop(g:&mut Game) -> u16 {
 
 #[allow(clippy::empty_loop)]
 fn end_screen() {
+    loose();
     io::_print(&String::from("You lost"));
     loop {}
 }

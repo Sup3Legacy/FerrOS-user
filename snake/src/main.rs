@@ -21,7 +21,7 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, _args: u64, _args_nu
     main();
 }
 //80*20
-const WIDTH: u16 = 80;
+const WIDTH: u16 = 60;
 const HEIGHT: u16 = 20;
 const SIZE : usize = WIDTH as usize * HEIGHT as usize;
 
@@ -46,7 +46,7 @@ enum State {
     Fruit
 }
 impl State {
-    pub fn to_str(&self) -> char {
+    pub fn to_char(self) -> char {
         match self {
             Self::Empty => '.',
             Self::Head(Dir::Left) => '<',
@@ -91,7 +91,7 @@ fn buffer_to_line(buffer:[State; SIZE], y: u16) -> String {
     let line = &buffer[beg..end];
     let mut res = String::new();
     for pixel in line {
-        res.push(pixel.to_str());
+        res.push(pixel.to_char());
     }
     res.push('\n');
     res
@@ -119,9 +119,9 @@ impl Snake {
             }
         }
         Self {
-            body: body,
+            body,
             fruited: false,
-            direction: direction
+            direction
         }
     }
     pub fn get_head_pos(&self) -> &(u16,u16) {
@@ -165,12 +165,12 @@ impl Game {
         }
         buffer[(fruit.1*WIDTH + fruit.0) as usize]  = State::Fruit;
         Self {
-            snake: snake,
-            fruit: fruit,
+            snake,
+            fruit,
             score: 0,
             ended: false,
-            rng: rng,
-            buffer: buffer
+            rng,
+            buffer
         }
     }
     
@@ -179,35 +179,35 @@ impl Game {
     }
     
     fn displace(&mut self) -> Result<(), SnakeError>{
-        let (head_x,head_y) = self.snake.get_head_pos();
+        let (head_x,head_y) = *self.snake.get_head_pos();
         let new_head = match &self.snake.direction {
             Dir::Left => {
-                if head_x <= &0_u16 {
+                if head_x == 0_u16 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
-                    (head_x-1, head_y+0)
+                    (head_x-1, head_y)
                 }
             },
             Dir::Right => {
-                if *head_x >= WIDTH-1 {
+                if head_x >= WIDTH-1 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
-                    (head_x+1, head_y+0)
+                    (head_x+1, head_y)
                 }
             },
             Dir::Up => {
-                if *head_y >= HEIGHT-1 {
+                if head_y >= HEIGHT-1 {
                     return Err(SnakeError::OutOfBounds)
                 }
                 else {
-                    (head_x+0, head_y-1)
+                    (head_x, head_y-1)
                 }
             },
             Dir::Down => {
-                if head_y <= &0_u16 {
+                if head_y == 0_u16 {
                     return Err(SnakeError::OutOfBounds)
                 } else {
-                    (head_x+0, head_y+1)
+                    (head_x, head_y+1)
                 }
             }
         };
@@ -239,9 +239,7 @@ impl Game {
     }
         
     pub fn update(&mut self) {
-        if let Err(_) = self.displace() {
-            self.ended = true
-        }
+        self.ended = self.displace().is_err();
         if self.snake.fruited {
             self.fruit = self.generate_fruit();
             self.score += 1;
@@ -318,7 +316,6 @@ fn sleep(n: usize) {
 }
 
 fn main_loop(g:&mut Game) -> u16 {
-    const n: usize = 10;
     while !g.ended {
         sleep(300);
         for c in get_inputs().chars() {
@@ -331,6 +328,7 @@ fn main_loop(g:&mut Game) -> u16 {
     g.score
 }
 
+#[allow(clippy::empty_loop)]
 fn end_screen() {
     io::_print(&String::from("You lost"));
     loop {}

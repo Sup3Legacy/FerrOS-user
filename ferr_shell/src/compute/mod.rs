@@ -359,7 +359,7 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
             }
             syscall::exec(&name, args)
         } else {
-            io::_print(&String::from("Only ELF has been implemented\n"));
+            io::_print(&String::from("\nOnly ELF has been implemented\n"));
             1
         }
     }

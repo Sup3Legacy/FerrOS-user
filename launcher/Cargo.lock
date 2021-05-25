@@ -77,7 +77,7 @@ dependencies = [
 [[package]]
 name = "ferr_os_librust"
 version = "0.1.0"
-source = "git+https://github.com/Sup3Legacy/FerrOS-librust#1647211f5ded8e2aff423870478cb308c2302924"
+source = "git+https://github.com/Sup3Legacy/FerrOS-librust#8342f7e26e0d3fda1960b196565abd1be0f816c1"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",
@@ -255,9 +255,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.26"
+version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a152013215dca273577e18d2bf00fa862b89b24169fb78c4c95aeb07992c9cec"
+checksum = "f0d8caf72986c1a598726adc988bb5984792ef84f5ee5aa50209145ee8077038"
 dependencies = [
  "unicode-xid",
 ]

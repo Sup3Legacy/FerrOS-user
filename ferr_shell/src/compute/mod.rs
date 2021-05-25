@@ -97,6 +97,35 @@ unsafe fn exec(command: Command, env: &mut BTreeMap<String, String>) -> usize {
                     } else {
                         await_end_and_kill(id, fd)
                     }
+                } else if prog_name.as_bytes()[0] == b'/' {
+                    let mut pwd;
+                    match env.get("PWD") {
+                        Some(n) => pwd = String::from(n),
+                        None => pwd = String::new(),
+                    }
+                    let id;
+                    let fd = syscall::open(&String::from("/dev/fifo"), io::OpenFlags::ORD | io::OpenFlags::OWR);
+                    if cmd.cmd_bg {
+                        id = 0;
+                    } else {
+                        id = syscall::fork();
+                    }
+                    if id == 0 {
+                        if !cmd.cmd_bg {
+                            syscall::dup2(io::STD_IN, fd);
+                        }
+                        syscall::close(fd);
+                        do_redirects(&cmd.cmd_redirects, &pwd);
+                        let name = String::from(prog_name);
+                        let mut args = cmd.cmd_line;
+                        args.push(String::from(&pwd));
+
+                        run(&name, &args);
+                        io::_print(&String::from("Program not found\n"));
+                        syscall::exit(1)
+                    } else {
+                        await_end_and_kill(id, fd)
+                    }
                 } else {
                     if cmd.cmd_line[0] == "cd" {
                         if cmd.cmd_line.len() > 1 && cmd.cmd_line[1].len() > 0 {
@@ -343,10 +372,10 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
         1
     } else {
         let start = io::read_input(fd, 512);
+        syscall::close(fd);
         if start.len() == 0 {
             1
         } else if start.len() > 4 && &start[0..4] == "\x7FELF".as_bytes() {
-            syscall::close(fd);
             syscall::exec(path, args)
         } else if start.len() > 4 && &start[0..2] == "#!/".as_bytes() {
             let mut name = String::from(start[2] as char);
@@ -357,10 +386,27 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
                     name.push(start[i] as char);
                 }
             }
-            syscall::exec(&name, args)
+            launch_elf(&name, args)
         } else {
             io::_print(&String::from("\nOnly ELF has been implemented\n"));
-            1
+            syscall::exit(1)
+        }
+    }
+}
+
+unsafe fn launch_elf(path: &String, args: &Vec<String>) -> usize {
+    let fd = syscall::open(path, io::OpenFlags::OXCUTE);
+    if fd == usize::MAX {
+        syscall::exit(1)
+    } else {
+        let start = io::read_input(fd, 4);
+        syscall::close(fd);
+        if start.len() < 4 {
+            syscall::exit(1)
+        } else if &start == "\x7ELF".as_bytes() {
+            syscall::exec(path, args)
+        } else {
+            syscall::exit(2)
         }
     }
 }

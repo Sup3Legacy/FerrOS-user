@@ -19,33 +19,78 @@ pub mod remove_variables;
 #[no_mangle]
 pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_number: u64) {
     ferr_os_librust::allocator::init(heap_address, heap_size);
+    let arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
     unsafe {
-        let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
+        /*let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
         syscall::dup2(io::STD_OUT, fd);
+        syscall::close(fd);*/
         syscall::set_screen_size(24, 80);
         syscall::set_screen_pos(1, 0);
-        let mut env1 = BTreeMap::new();
-        env1.insert(String::from("SHELL"), String::from("FerrSH"));
-        env1.insert(String::from("PWD"), String::from("/"));
-        env1.insert(String::from("PS1"), String::from("$(SHELL):$(PWD) >> "));
-        env1.insert(String::from("PATH"), String::from("/usr/bin/"));
+    }
 
-        let arguments = ferr_os_librust::env::retrieve_arguments(args_number, args);
-        for (ind, v) in arguments.iter().enumerate() {
-            let str = alloc::format!("{}", ind);
-            env1.insert(str, String::from(v));
-        }
+    let mut env1 = BTreeMap::new();
+    env1.insert(String::from("SHELL"), String::from("FerrSH"));
+    if args_number == 1 {
+        env1.insert(String::from("PWD"), String::from("/"));
+    } else {
+        env1.insert(String::from("PWD"), String::from(&arguments[arguments.len() - 1]));
+    }
+    env1.insert(String::from("PS1"), String::from("$(SHELL):$(PWD) >> "));
+    env1.insert(String::from("PATH"), String::from("/usr/bin/"));
+
+    for (ind, v) in arguments.iter().enumerate() {
+        let str = alloc::format!("{}", ind);
+        env1.insert(str, String::from(v));
+    }
+    unsafe {
         ENV = Some(env1);
     }
 
-
     if args_number == 1 {
-        main()
+        interactive()
+    } else {
+        launch_file(&arguments[0]);
+    }
+}
+
+fn launch_file(file: &String) {
+    if let Some(env) = unsafe { &mut ENV} {
+        let code;
+        unsafe {
+            let fd = syscall::open(file, io::OpenFlags::OXCUTE);
+            code = read_all(fd);
+            syscall::close(fd);
+        }
+        let mut code2 = String::new();
+        let mut t = false;
+        for i in code.chars() {
+            if t {
+                code2.push(i);
+            }
+            if i == '\n' {
+                t = true
+            }
+        }
+
+        match remove_variables::main(&code2, env) {
+            Ok(unfolded) => {
+                compute::bash(unfolded, env)
+            },
+            Err(()) => {
+                unsafe {
+                    syscall::exit(1);
+                }
+            }
+        };
+    } else {
+        unsafe {
+            syscall::exit(1);
+        }
     }
 }
 
 #[inline(never)]
-fn main() {
+fn interactive() {
     loop {
         if let Some(env) = unsafe { &mut ENV } {
             let v1 = match env.get("PS1") {
@@ -104,5 +149,20 @@ fn get_input(intro: &String) -> String {
         io::_print(&begin);
         io::_print(&String::from("|"));
         io::_print(&end);
+    }
+}
+
+fn read_all(fd: usize) -> String {
+    let mut s = String::new();
+
+    loop {
+        let v = io::read_input(fd, 512);
+        if v.len() == 0 {
+            return s;
+        }
+
+        for i in v {
+            s.push(i as char);
+        }
     }
 }

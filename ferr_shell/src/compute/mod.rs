@@ -377,7 +377,7 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
             1
         } else if start.len() > 4 && &start[0..4] == "\x7FELF".as_bytes() {
             syscall::exec(path, args)
-        } else if start.len() > 4 && &start[0..2] == "#!/".as_bytes() {
+        } else if start.len() > 4 && &start[0..3] == "#!/".as_bytes() {
             let mut name = String::from(start[2] as char);
             for i in 3..start.len() {
                 if start[i] == b'\n' {

@@ -386,6 +386,10 @@ unsafe fn run(path: &String, args: &Vec<String>) -> usize {
                     name.push(start[i] as char);
                 }
             }
+            let fd = syscall::open(path, io::OpenFlags::OXCUTE);
+            io::read_input(fd, 2 + name.len());
+            syscall::dup2(io::STD_IN, fd);
+            syscall::close(fd);
             launch_elf(&name, args)
         } else {
             io::_print(&String::from("\nOnly ELF has been implemented\n"));
@@ -403,9 +407,23 @@ unsafe fn launch_elf(path: &String, args: &Vec<String>) -> usize {
         syscall::close(fd);
         if start.len() < 4 {
             syscall::exit(1)
-        } else if &start == "\x7ELF".as_bytes() {
+        } else if &start[0..4] == "\x7FELF".as_bytes() {
             syscall::exec(path, args)
         } else {
+            io::_print(&String::from("\nOnly ELF has been implemented for interpreter\n"));
+            let mut s = String::new();
+            let l = start.len();
+            for i in start {
+                s.push(i as char)
+            }
+            s.push('"');
+            s.push((l as u8) as char);
+            s.push('\n');
+            s.push_str("\x7FELF");
+            s.push('"');
+            s.push(4 as char);
+            s.push('\n');
+            io::_print(&s);
             syscall::exit(2)
         }
     }

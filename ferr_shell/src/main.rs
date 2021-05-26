@@ -24,8 +24,8 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
         /*let fd = syscall::open(&String::from("/hard/screen"), io::OpenFlags::OWR);
         syscall::dup2(io::STD_OUT, fd);
         syscall::close(fd);*/
-        syscall::set_screen_size(24, 80);
-        syscall::set_screen_pos(1, 0);
+        /*syscall::set_screen_size(24, 80);
+        syscall::set_screen_pos(1, 0);*/
     }
 
     let mut env1 = BTreeMap::new();
@@ -49,18 +49,13 @@ pub extern "C" fn _start(heap_address: u64, heap_size: u64, args: u64, args_numb
     if args_number == 1 {
         interactive()
     } else {
-        launch_file(&arguments[0]);
+        launch_file();
     }
 }
 
-fn launch_file(file: &String) {
+fn launch_file() {
     if let Some(env) = unsafe { &mut ENV} {
-        let code;
-        unsafe {
-            let fd = syscall::open(file, io::OpenFlags::OXCUTE);
-            code = read_all(fd);
-            syscall::close(fd);
-        }
+        let code = read_all(io::STD_IN);
         let mut code2 = String::new();
         let mut t = false;
         for i in code.chars() {
@@ -72,7 +67,25 @@ fn launch_file(file: &String) {
             }
         }
 
-        match remove_variables::main(&code2, env) {
+        let mut line = String::new();
+        for i in code2.chars() {
+            if i == '\n' {
+                match remove_variables::main(&line, env) {
+                    Ok(unfolded) => {
+                        compute::bash(unfolded, env)
+                    },
+                    Err(()) => {
+                        unsafe {
+                            syscall::exit(1);
+                        }
+                    }
+                };
+                line = String::new();
+            } else {
+                line.push(i)
+            }
+        }
+        match remove_variables::main(&line, env) {
             Ok(unfolded) => {
                 compute::bash(unfolded, env)
             },
